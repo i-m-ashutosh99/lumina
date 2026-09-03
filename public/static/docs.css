@@ -140,10 +140,13 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .card p { margin: 0; color: var(--text-dim); font-size: 0.85rem; }
 .card a { color: inherit; }
 
-.demo-canvas-wrap {
+.demo-canvas-wrap, .demo-frame {
   background: #000; border-radius: 10px; overflow: hidden;
   border: 1px solid var(--border); margin: 12px 0;
+  min-height: 320px; display: flex; align-items: center; justify-content: center;
 }
+.demo-source { margin: 0 0 8px; font-size: 0.85rem; }
+.demo-source a { color: var(--text-dim); }
 .demo-controls {
   display: flex; gap: 8px; margin: 10px 0 24px; align-items: center;
 }
