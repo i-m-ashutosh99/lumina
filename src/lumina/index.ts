@@ -104,3 +104,26 @@ export * from './animations/transform';
 export * from './animations/indication';
 export * from './animations/movement';
 export * from './animations/changing';
+
+// ---- player + export (doc 08) ----
+export { Player } from './player/player';
+export type { PlayerOptions, PlayerEvent } from './player/player';
+export { LuminaPlayerElement, register as registerScene } from './player/element';
+export { exportWebm, downloadWebm } from './export/webm';
+export type { WebmExportOptions } from './export/webm';
+export { exportGif, downloadGif } from './export/gif';
+export type { GifExportOptions } from './export/gif';
+export {
+  exportPngSequence, downloadPngSequence, screenshot, downloadScreenshot,
+} from './export/png';
+export type { PngSequenceOptions, PngFrame } from './export/png';
+
+// ---- boolean ops (doc 09 §15 — polygon-clipping based path booleans) ----
+export { Union, Intersection, Difference, Exclusion } from './mobjects/boolean/boolean-ops';
+export type { BooleanOpOptions } from './mobjects/boolean/boolean-ops';
+
+// ---- graph / digraph (doc 09 §10.2 — core substrate + algorithm layer) ----
+export { Graph, DiGraph, registerGraphTextCtor } from './mobjects/graph/graph';
+export type {
+  VertexId, EdgeKey, LayoutName, GraphOptions, AlgoAnimOptions,
+} from './mobjects/graph/graph';

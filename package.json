@@ -13,10 +13,12 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "gifenc": "^1.0.3",
     "hono": "^4.13.5",
     "katex": "^0.16.22",
     "mathjax-full": "^3.2.1",
-    "opentype.js": "^2.0.0"
+    "opentype.js": "^2.0.0",
+    "polygon-clipping": "^0.15.7"
   },
   "devDependencies": {
     "@hono/vite-build": "^1.11.1",
