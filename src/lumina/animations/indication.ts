@@ -329,10 +329,10 @@ export class Broadcast extends Animation {
   point: Vec3;
   nRings: number;
   focalDistance: number;
-  rings: Mobject[] = [];
+  rings: Circle[] = [];
   begin(): void {
     this.rings = Array.from({ length: this.nRings }, (_, i) =>
-      new Circle({ radius: 0.1, color: '#FFFFCC' }).moveTo(this.point)
+      new Circle({ radius: 0.1, color: '#FFFFCC' }).moveTo(this.point) as Circle
     );
   }
   interpolateMobject(alpha: number): void {
@@ -342,8 +342,7 @@ export class Broadcast extends Animation {
       if (rr < 0) {
         r.style.strokeOpacity = 0;
       } else {
-        r.scaleTo?.(this.focalDistance * rr + 0.05);
-        (r as any).points = (r as any).points; // keep
+        r.scaleTo(this.focalDistance * rr + 0.05);
         r.style.strokeOpacity = 1 - rr;
       }
     });

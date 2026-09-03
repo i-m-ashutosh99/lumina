@@ -7,7 +7,7 @@
  * and Group (union of children).
  */
 import { Vec3, v, add, sub, mul, dot, norm, lerp, rotatePoint } from '../math/vec';
-import { mat3 } from '../math/mat';
+import { mat3, Mat3 } from '../math/mat';
 import { ManimColor, resolveColor, gradientAt } from '../math/color';
 import {
   Style, defaultStyle, applyStyleOverrides, lerpStyle, normalizeOptions,
@@ -732,9 +732,9 @@ export class Mobject {
   }
 
   /** Apply a matrix to points (2x2 or 3x3, about center for linear-algebra use). */
-  applyMatrixToPoints(m: mat3 | number[][]): this {
-    let M: mat3;
-    if (Array.isArray(m) && typeof m[0] === 'number') M = m as mat3;
+  applyMatrixToPoints(m: Mat3 | number[][]): this {
+    let M: Mat3;
+    if (Array.isArray(m) && typeof m[0] === 'number') M = m as Mat3;
     else M = mat3.from2x2(m as number[][]);
     this.applyToPoints((p) => mat3.apply(M, p));
     return this;

@@ -325,8 +325,8 @@ export class Arrow extends VGroup {
     tip.style.fill = this.style.stroke;
     (this as any).maxStrokeWidth = o.maxStrokeWidthToLengthRatio;
   }
-  getStart(): Vec3 { return this.children[0]?.getStart() ?? ORIGIN; }
-  getEnd(): Vec3 { return this.children[this.children.length - 1]?.getEnd() ?? ORIGIN; }
+  getStart(): Vec3 { return (this.children[0] as Line)?.getStart?.() ?? ORIGIN; }
+  getEnd(): Vec3 { return (this.children[this.children.length - 1] as ArrowTip)?.getEnd?.() ?? ORIGIN; }
 }
 
 export class Vector extends Arrow {
