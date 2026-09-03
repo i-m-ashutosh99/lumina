@@ -1,8 +1,8 @@
 # Lumina — Research, Planning, and Design Documentation
 
-**Status:** Documentation only. **No library code has been written.**  
- 
-**Working library name:** **Lumina** (not locked — alternatives: VisuaJS, Animath, ManimLite). Confirm the name before implementation.
+**Status:** Design source of truth. **Library code IS written** — a real, compiling TypeScript engine lives under `src/lumina/` (~8,360 lines) and the docs site under `src/site/`. See [../README.md](../README.md) for live implementation status and the authoritative gap table. Docs 12–14 are the 2026 audit/research/plan additions.
+
+**Working library name:** **Lumina** (locked — see `package.json` `"name": "lumina"`, MIT license).
 
 ---
 
@@ -46,6 +46,9 @@ The intended product is **not a thin wrapper** around any of the above. It is a 
 | [09-DOMAIN-MODULES.md](09-DOMAIN-MODULES.md) | Math / physics / CS / AI-ML module catalogue the library must ship. |
 | [10-BUILD-PLAN.md](10-BUILD-PLAN.md) | Phased implementation plan, file layout, milestones. **Build only after confirmation.** |
 | [11-GAPS-AND-INNOVATIONS.md](11-GAPS-AND-INNOVATIONS.md) | What existing libs miss, and the innovations Lumina should own. |
+| [12-RESEARCH-COMPARISON-2026.md](12-RESEARCH-COMPARISON-2026.md) | **2026-09-03:** live web research + feature comparison vs manim-web / Motion Canvas / Remotion / Manim.js / KaTeX / boolean-op libs / export APIs / Manim CE v0.21; MathJax SVG→Bézier pipeline re-verified. |
+| [13-AUDIT-PLAN-ISSUES.md](13-AUDIT-PLAN-ISSUES.md) | **2026-09-03:** deep end-to-end audit of the implemented engine, confirmed gap list (G1–G16), issues (I1–I12), and the prioritized implementation plan (Phase A–D). |
+| [14-INNOVATIONS-GAPS.md](14-INNOVATIONS-GAPS.md) | **2026-09-03:** gaps newly confirmed by 2026 research, new discoveries (offline export, pointer→tracker interaction, stochastic determinism, backend-agnostic SVG-path parser), and the innovation roadmap. |
 
 Root: [../README.md](../README.md) is a short project overview that points here.
 
