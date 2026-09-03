@@ -75,7 +75,7 @@ export class TracedPath extends VMobject {
  * draw attention to a shape without obscuring it.
  */
 export class AnimatedBoundary extends VMobject {
-  target: VMobject;
+  boundaryTarget: VMobject;
   colors: ManimColor[];
   cycleTime: number;
 
@@ -84,7 +84,7 @@ export class AnimatedBoundary extends VMobject {
     opts: { colors?: ManimColor[]; maxStrokeWidth?: number; cycleTime?: number } = {}
   ) {
     super();
-    this.target = target;
+    this.boundaryTarget = target;
     this.colors = (opts.colors ?? ['#3B82F6', '#22D3EE', '#3B82F6']).map(resolveColor);
     this.cycleTime = opts.cycleTime ?? 3;
     this.style.strokeWidth = opts.maxStrokeWidth ?? 4;
@@ -93,8 +93,8 @@ export class AnimatedBoundary extends VMobject {
   }
 
   private tick(): void {
-    this.points = this.target.points.map((p) => [...p] as Vec3);
-    this.closed = this.target.closed;
+    this.points = this.boundaryTarget.points.map((p) => [...p] as Vec3);
+    this.closed = this.boundaryTarget.closed;
     const phase = (this.getSceneTime() % this.cycleTime) / this.cycleTime;
     const n = this.colors.length;
     const idx = Math.min(n - 2, Math.floor(phase * (n - 1)));

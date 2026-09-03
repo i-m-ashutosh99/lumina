@@ -1,0 +1,28 @@
+{
+  "name": "lumina",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Lumina — a from-scratch, browser-native JavaScript animation engine for Manim/3Blue1Brown-style explainer videos, math/physics/CS/AI-ML visualizations, and interactive educational embeds.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "wrangler pages dev",
+    "deploy": "npm run build && wrangler pages deploy",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "hono": "^4.13.5",
+    "katex": "^0.16.22",
+    "opentype.js": "^2.0.0"
+  },
+  "devDependencies": {
+    "@hono/vite-build": "^1.11.1",
+    "@hono/vite-dev-server": "^0.26.1",
+    "@types/katex": "^0.16.7",
+    "@types/opentype.js": "^1.3.8",
+    "typescript": "^5.6.3",
+    "vite": "^8.1.4",
+    "wrangler": "^4.110.0"
+  }
+}

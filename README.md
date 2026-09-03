@@ -1,101 +1,101 @@
-# Lumina — Research & Planning (Documentation Only)
+# Lumina — a from-scratch, browser-native Manim-style animation engine
 
-**Status:** Documentation only. **No library code has been written.**  
-**Date of research:** 2026-09-02  
-**Working name:** **Lumina** (not locked — alternatives: VisuaJS, Animath, ManimLite)
+**Status: partially implemented engine, pre-alpha.** This is **not** documentation-only anymore — there is real, compiling TypeScript under `src/lumina/` (~6,500 lines) implementing a Manim-Community/ManimGL-familiar `Mobject → Animation → Scene` model with a seekable timeline and a Canvas2D renderer. It is **far from feature-complete** relative to the goal (pack the capabilities of ManimCE + ManimGL + Three.js-class 3D + a custom player, for any math/physics/CS/AI-ML explainer). See **Implementation status** below for exactly what works today and what is still missing.
 
-This repository currently holds a **complete research and design package** for a from-scratch, browser-native JavaScript animation library. It is **not** an implemented engine, playground, or npm package yet.
-
-**Do not start implementation until the user explicitly confirms this documentation.**
+The original planning docs are kept in `docs/00-INDEX.md` … `docs/11-GAPS-AND-INNOVATIONS.md` — they remain the design source of truth (API shape, architecture, domain-pack catalogue, build plan) for everything not yet built.
 
 ---
 
-## What was requested
+## What works today (`src/lumina/`)
 
-A universal JS library packing the capabilities of:
+- **Math kernel** (`math/`): `Vec3` ops, 3×3/4×4 matrices, full ManimCE color palette + color math, cubic-Bézier kernel (eval / split / partial / smoothing / arc-to-cubics / marching-squares implicit contouring), seeded RNG, constants, and the **full ManimCE + easing.net rate-function catalogue**.
+- **Core** (`core/`): `Mobject` (hierarchy, placement: `shift/moveTo/nextTo/alignTo/toEdge/toCorner/scale/stretch/rotate/flip/arrange/arrangeInGrid`), `VMobject` (cubic-Bézier geometry, `pointwiseBecomePartial`, point-count alignment for scribble-free `Transform`), `Group`/`VGroup`/`VDict`, `.animate` proxy, `saveState/restore`, updaters, `ValueTracker`/`ComplexValueTracker`/`alwaysRedraw`, `Scene` (record-then-seek `play()`/`wait()` matching real ManimCE's `Scene.play` lifecycle), `Timeline` (pure `render(t)` seeking), `Clock`.
+- **Geometry** (`mobjects/geometry/basic.ts`): Circle/Arc/Dot/Ellipse/Line/Arrow/Vector/DoubleArrow/CurvedArrow/Polygon/RegularPolygon/Star/Square/Rectangle/RoundedRectangle/ConvexHull/Cutout/Angle/RightAngle/TangentLine and more — all built from cubic Béziers so everything is `Transform`-able.
+- **Text** (`mobjects/text/`): real vector glyphs via `opentype.js` (Roboto CDN fonts), `Text`/`Paragraph`/`Title`/`BulletedList`/`DecimalNumber`/`Integer`/`Variable`.
+- **Graphing:** `NumberLine`/`UnitInterval` only.
+- **Animations**: `Create`/`Uncreate`/`Write`/`Unwrite`/`DrawBorderThenFill`, `FadeIn`/`FadeOut`, `Grow*`, `Transform` family (`ReplacementTransform`, `TransformFromCopy`, `ClockwiseTransform`, `FadeTransform*`, `TransformMatchingShapes`/`TransformMatchingTex`), `ApplyMatrix`/`ApplyFunction`/`ApplyComplexFunction`, `Rotate`/`Rotating`/`MoveAlongPath`/`Homotopy`/`PhaseFlow`, `Indicate`/`Circumscribe`/`Flash`/`FocusOn`/`Wiggle`/`Broadcast`/`ApplyWave`, `ChangingDecimal`, `TracedPath`/`AnimatedBoundary`/`ChangeSpeed`, `AnimationGroup`/`LaggedStart`/`LaggedStartMap`/`Succession`.
+- **Camera**: 2D `Camera` + `MovingCamera`/`FrameMobject` (animatable frame).
+- **Renderer**: Canvas2D only (`renderers/canvas2d.ts`) — Bézier path building, background-stroke (3b1b readability trick), frustum culling, dpr-aware.
+- **Build**: `package.json`, `tsconfig.json`, `vite.config.ts`, `wrangler.jsonc` now exist. `npm run typecheck` and `npm run build` both pass. `src/index.tsx` serves a minimal Canvas2D smoke-test scene (`src/demo.ts`) — **not** a real playground/player.
 
-- Manim Community Edition (ManimCE, Python, Cairo/FFmpeg)
-- ManimGL / 3b1b (Grant Sanderson’s OpenGL engine)
-- Manim.js (JazonJiao, p5, 2018)
-- manim-web (maloyan, TypeScript / Three.js)
-- Three.js and related explainer / math-viz tools (Motion Canvas, Remotion, MathBox, JSXGraph, Desmos, KaTeX, p5, DefinedMotion, Manim Slides)
+Run it:
 
-Target: 3Blue1Brown-style explainer videos **and** educational website embeds. 1D / 2D / 3D. Maths, physics, CS, AI/ML. Morphing, geometric transforms, conceptual flow, formula-to-graph morphing, step-by-step decomposition, interactive simulation, dynamic parameter scaling.
-
-Two consumption modes:
-
-1. Embed in educational websites
-2. JS / HTML / CSS against a custom web player / renderer
-
-Browser-based rendering and live preview. **From scratch** — not a thin wrapper or fork.
+```bash
+npm install
+npm run dev       # http://localhost:5173 — smoke-test scene
+npm run typecheck
+npm run build
+```
 
 ---
 
-## How to read the documentation
+## Implementation status vs. the "pack everything" goal — what is still missing
 
-Start here: **[docs/00-INDEX.md](docs/00-INDEX.md)** (map, constraints, decision log, sources).
+This is the honest gap list. Nothing below should be assumed to exist:
 
-| File | Contents |
+| Area | Status |
 |---|---|
-| [docs/00-INDEX.md](docs/00-INDEX.md) | Doc map, product intent, hard constraints, open decisions |
-| [docs/01-RESEARCH-LANDSCAPE.md](docs/01-RESEARCH-LANDSCAPE.md) | Every relevant existing library — what it does and does not do |
-| [docs/02-MANIM-PYTHON-COMPLETE-API.md](docs/02-MANIM-PYTHON-COMPLETE-API.md) | Full ManimCE v0.21.0 + ManimGL inventory (source-of-truth checklist) |
-| [docs/03-MANIMJS-AND-MANIM-WEB.md](docs/03-MANIMJS-AND-MANIM-WEB.md) | Deep dive on the two existing JS Manim-like projects; study, do not fork |
-| [docs/04-THREEJS-AND-RELATED-LIBS.md](docs/04-THREEJS-AND-RELATED-LIBS.md) | Three.js, Motion Canvas, Desmos, KaTeX, and related tools |
-| [docs/05-FEATURE-MATRIX.md](docs/05-FEATURE-MATRIX.md) | Capability matrix vs CE / GL / M.js / MW / Three.js / Motion Canvas |
-| [docs/06-ARCHITECTURE.md](docs/06-ARCHITECTURE.md) | Proposed engine: scene graph, seekable timeline, dual renderer, player |
-| [docs/07-API-DESIGN.md](docs/07-API-DESIGN.md) | Proposed JavaScript public API (Manim-familiar, JS idioms) |
-| [docs/08-RENDERING-AND-PLAYER.md](docs/08-RENDERING-AND-PLAYER.md) | Canvas2D + owned WebGL, preview, `<lumina-player>`, embed, export |
-| [docs/09-DOMAIN-MODULES.md](docs/09-DOMAIN-MODULES.md) | Math / physics / CS / AI-ML packs and pedagogical primitives |
-| [docs/10-BUILD-PLAN.md](docs/10-BUILD-PLAN.md) | Phases 0–4, file layout, v1 gate. **Build only after confirmation.** |
-| [docs/11-GAPS-AND-INNOVATIONS.md](docs/11-GAPS-AND-INNOVATIONS.md) | What existing libs miss, and the innovations Lumina should own |
+| **MathTex / Tex (KaTeX → vector glyphs)** | ❌ Not implemented. `font.ts` already references KaTeX font URLs but no KaTeX parsing / SVG-path extraction / `MathTex` class exists yet. This blocks `FormulaToGraph`, `TransformMatchingTex` demos, and any real math typesetting. |
+| **Axes / NumberPlane / ComplexPlane / PolarPlane, `plot()`/`c2p`/`p2c`** | ❌ Not implemented. Only the 1D `NumberLine` exists. No 2D coordinate systems, no function plotting, no Riemann rectangles, no vector fields yet. |
+| **3D anything** (`MeshMobject`, Sphere/Cube/Cylinder/Cone/Torus/platonic solids, Surface/ParametricSurface, Line3D/Arrow3D/Dot3D, `ThreeDCamera`/`ThreeDScene`, `fixInFrame` HUD compositing) | ❌ Not implemented. No WebGL renderer exists at all — `renderers/` has Canvas2D only. This is a major gap for "1D/2D/3D … any subject." |
+| **Player** (`Player` class, `<lumina-player>` web component: play/pause/seek/speed/loop/fullscreen/section nav) | ❌ Not implemented. `Scene` has `startPlayback/pausePlayback/seek` primitives but no chrome/UI/web-component wraps them. |
+| **Export** (WebM via MediaRecorder, GIF, PNG sequence) | ❌ Not implemented. |
+| **Boolean ops** (`Union`/`Intersection`/`Difference`/`Exclusion`) | ❌ Not implemented. |
+| **Graph / DiGraph mobject** + layouts (circular/tree/layered/spring) + algorithm animation (BFS/DFS/Dijkstra/MST) | ❌ Not implemented. |
+| **Matrix / Table / Code (syntax-highlighted) mobjects** | ❌ Not implemented. |
+| **Brace, SurroundingRectangle, BackgroundRectangle, Cross, Underline, Checkmark, DashedVMobject variants** | ❌ Not implemented (some overlap exists via `Circumscribe`'s ad-hoc box, but no first-class mobjects). |
+| **VectorField / StreamLines** | ❌ Not implemented. |
+| **Domain packs** — `math-linalg` (`LinearTransformationScene`), `math-calculus` (Riemann/tangent/area), `math-complex`, `math-probability`, `math-discrete`, `physics` (World/Particle/Spring/Fields/Waves/Optics), `cs` (ArrayMobject/Stack/Tree/SortScene/CodeBlock/Automata), `ml` (NeuralNet/LossSurface/AttentionMatrix) | ❌ None implemented. This is the entire "for any subject: maths, physics, CS, AI/ML" promise from `docs/09-DOMAIN-MODULES.md` — currently zero domain packs exist. |
+| **JSON scene serialization**, **React wrapper**, **audio (`addSound`)**, **a11y** | ❌ Not implemented (`addSound` is an explicit documented no-op stub in `core/scene.ts`). |
+| **Playground / docs site** | ❌ Not implemented. `src/index.tsx` is a bare smoke test, not an editor+preview playground. |
+
+### Bugs fixed in this pass
+
+- `AnimatedBoundary.target` shadowed `Mobject`'s `target` accessor (TS2610) — renamed to `boundaryTarget`.
+- `Circle.scaleTo` was called through an optional-chain typed as absent on `Broadcast`'s ring array (typed as `Mobject[]`, missing the `Circle` subclass method) — retyped `rings: Circle[]`.
+- `Mobject.applyMatrixToPoints` used the `mat3` **value** (namespace object) as a **type** (TS2749) — introduced and used the `Mat3` type alias correctly.
+- `thereAndBackWithPause` / `there_and_back_with_pause` were typed as single-argument `RateFunc` but called with two arguments (TS2554) — retyped as a plain two-argument function.
+- `Arrow.getStart()/getEnd()` called `.getStart()/.getEnd()` on `children[i]` typed as base `Mobject` (which has neither) — cast to `Line`/`ArrowTip` respectively.
+- Repo had **no build tooling at all** (no `package.json`, `tsconfig.json`, `vite.config.ts`, `wrangler.jsonc`) despite ~6,400 lines of TypeScript already existing — the code could not even be type-checked, let alone run in a browser. Added all of the above; `npm run typecheck` and `npm run build` now both pass, and the smoke-test scene runs live in a browser (Canvas2D `Create`/`Transform`/`.animate`/seek).
+- Moved all engine sources from the repo root into `src/lumina/` (the layout `docs/10-BUILD-PLAN.md §7` specifies) and added the public barrel `src/lumina/index.ts`.
 
 ---
 
-## Working design (summary — details in the docs)
+## Priority order for finishing "pack everything, missing nothing"
 
-- **Name:** Lumina (confirm before code). Do not call the product “Manim”.
-- **Model:** Mobject → Animation → Scene. `await scene.play(...)`. CE and GL aliases (`Create` ≡ `ShowCreation`).
-- **Render:** Canvas2D for 2D VMobjects; owned WebGL for 3D (Three.js is **not** a core dependency). KaTeX for math.
-- **Time:** Seekable `render(t)` via recorded clips / snapshots (Python Manim is forward-only).
-- **Player:** First-party JS `Player` + `<lumina-player>` web component. Custom HTML/CSS chrome is a supported mode.
-- **Export (v1):** WebM via MediaRecorder. GIF / PNG later. No in-browser FFmpeg.
-- **Packs:** `lumina/math-*`, `physics`, `cs`, `ml` after the 2D core.
-- **License (proposed):** MIT. No Pi creatures (copyrighted).
-- **v1 gate:** the acceptance scene in [docs/07-API-DESIGN.md](docs/07-API-DESIGN.md) §17 plays, seeks, embeds, and exports WebM.
+1. **MathTex** (KaTeX output → SVG path → VMobject) — unblocks nearly every math/physics/ML demo and `FormulaToGraph`.
+2. **Axes / NumberPlane / plot()** — unblocks calculus, linear algebra, and most "formula ↔ graph" pedagogy.
+3. **Player + `<lumina-player>` + WebM export** — required to call this a usable product, not just a library.
+4. **3D** (own WebGL renderer, `MeshMobject`, primitives, `ThreeDScene`) — required for the "1D/2D/3D" promise and for linear-algebra/ML surface demos.
+5. **Domain packs** (`math-linalg` → `math-calculus` → `cs`/`physics`/`ml`) — required for "any subject" coverage.
+6. Boolean ops, Graph/DiGraph, Matrix/Table/Code mobjects, VectorField/StreamLines, JSON serialization, playground/docs site.
 
-This sandbox’s Hono + Cloudflare Pages template is unchanged Hello World. It can later host docs + playground — **not until confirmation**.
+See `docs/10-BUILD-PLAN.md` for the full phased plan this follows (Phase 1 is now ~70% done; Phases 2–4 are not started).
 
 ---
 
-## What exists in this repo right now
+## Repository layout
 
-- `docs/` — the twelve markdown files above (00–11)
-- Stock Hono / Vite / Wrangler template (`src/index.tsx` Hello World)
-- **No** `src/lumina/` engine
-- **No** playground
-- **No** extra npm dependencies for the library
-- **No** deployment of a library
+```
+src/
+  index.tsx          # Hono route: smoke-test page (NOT the playground)
+  renderer.tsx        # Hono JSX shell
+  demo.ts             # smoke-test scene
+  lumina/             # THE ENGINE
+    math/            # vec, mat, color, bezier, rng, constants, rate-functions
+    core/             # mobject, vmobject, group, animation, scene, clock, timeline, style, updater
+    mobjects/
+      geometry/       # basic.ts — Circle/Line/Arrow/Polygon/... family
+      graphing/       # number-line.ts (Axes/NumberPlane NOT here yet)
+      text/           # text.ts, font.ts
+    animations/       # creation, composition, transform, indication, movement, changing
+    cameras/          # camera.ts (2D Camera + MovingCamera)
+    renderers/        # canvas2d.ts (WebGL NOT here yet)
+    index.ts          # public barrel
+docs/                  # design docs (00–11) — still the source of truth for unbuilt features
+public/static/         # style.css
+```
 
----
+## License
 
-## Open decisions (please confirm or override)
-
-From [docs/00-INDEX.md](docs/00-INDEX.md):
-
-1. **Name** — Lumina, or VisuaJS / Animath / ManimLite / other
-2. **Language** — TypeScript, ESM + IIFE + `.d.ts` (recommended)
-3. **API fidelity** — Manim-familiar names + JS idioms (recommended), not a line-by-line Python port
-4. **Three.js** — not a core dependency (recommended)
-5. **Math** — KaTeX (recommended)
-6. **Player** — first-party `<lumina-player>` (recommended)
-7. **v1 scope** — 2D core + player + embed + math text; 3D and domain packs later ([docs/10-BUILD-PLAN.md](docs/10-BUILD-PLAN.md))
-8. **License** — MIT (recommended)
-
-When you confirm (with any overrides), implementation follows the kickoff checklist in [docs/10-BUILD-PLAN.md](docs/10-BUILD-PLAN.md) §15.
-
----
-
-## Features not yet implemented
-
-Everything. This is a spec. The library, player, playground, demos, and deploy are **out of scope until you say to start building**.
+MIT (per `docs/00-INDEX.md` decision log). No Pi-creature assets are included or planned (copyrighted).

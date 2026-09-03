@@ -24,13 +24,13 @@ export const thereAndBack: RateFunc = (t) => {
   const s = smoothstep(t);
   return 2 * (s < 0.5 ? s : 1 - s);
 };
-export const thereAndBackWithPause: RateFunc = (t, pauseRatio = 1 / 3) => {
+export function thereAndBackWithPause(t: number, pauseRatio = 1 / 3): number {
   const a = 1.5 * pauseRatio;
   const b = 1 - a;
   if (t < a) return thereAndBack(t / a);
   if (t < b) return 1;
   return thereAndBack((t - b) / a);
-};
+}
 export function there_and_back_with_pause(t: number, pauseRatio = 1 / 3) {
   return thereAndBackWithPause(t, pauseRatio);
 }
