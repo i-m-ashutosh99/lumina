@@ -5,6 +5,7 @@
 import { Animation, AnimOptions, registerTransformFactory } from '../core/animation';
 import { Mobject } from '../core/mobject';
 import { VMobject } from '../core/vmobject';
+import { MeshMobject } from '../core/mesh-mobject';
 import { lerp } from '../math/vec';
 import { normalizeOptions } from '../core/style';
 
@@ -29,7 +30,10 @@ export class Transform extends Animation {
   begin(): void {
     super.begin();
     // Pre-align both sides so lerping is scribble-free (doc 06 §5).
-    if (this.mobject && this.target) {
+    // MeshMobject (3D) has its own vertex-count-matched CPU-lerp path
+    // (`interpolatePoints`) rather than VMobject's cubic-curve alignment —
+    // skip alignment for it and let interpolateMobject dispatch below.
+    if (this.mobject && this.target && !(this.mobject instanceof MeshMobject)) {
       const a = this.mobject;
       const b = this.target;
       const aV = a as VMobject;
@@ -46,7 +50,16 @@ export class Transform extends Animation {
   }
 
   interpolateMobject(alpha: number): void {
-    if (!this.mobject || !this.alignedStart || !this.alignedTarget) return;
+    if (!this.mobject) return;
+    // 3D path: MeshMobject interpolates its own vertex buffers (keeps
+    // `positions`/`points` mirrored and lerps normals) — restoreStart()
+    // already reset `this.mobject` to its start snapshot before this call,
+    // so lerp from there toward `this.target`.
+    if (this.mobject instanceof MeshMobject && this.target instanceof MeshMobject) {
+      this.mobject.interpolatePoints(this.target, alpha);
+      return;
+    }
+    if (!this.alignedStart || !this.alignedTarget) return;
     const a = this.alignedStart.points;
     const b = this.alignedTarget.points;
     const arc = this.pathArc;

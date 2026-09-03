@@ -2,11 +2,18 @@
  * Lumina — camera.ts
  * 2D camera: world→pixel mapping via a `frame` (center, width, height,
  * rotation). MovingCamera animates the frame as if it were a mobject.
+ *
+ * ThreeDCamera (below) extends this with the Euler-angle 3D camera doc 06
+ * §7 specifies (`phi`, `theta`, `gamma`, `focalDistance`, `zoom`,
+ * `lightSource`) — matching real ManimCE's `ThreeDCamera` naming so GL/CE
+ * scenes with `set_camera_orientation(phi=..., theta=...)` port directly.
  */
-import { Vec3, v, add, sub, mul } from '../math/vec';
+import { Vec3, v, add, sub, mul, norm, cross } from '../math/vec';
+import { Mat4, mat4 } from '../math/mat';
 import { FRAME_HEIGHT, FRAME_WIDTH } from '../math/constants';
 import { Mobject } from '../core/mobject';
 import { rotatePoint } from '../math/vec';
+import { Light, defaultLight } from '../mobjects/three-d/light';
 
 export interface Frame {
   center: Vec3;
@@ -161,4 +168,133 @@ export class MovingCamera extends Camera {
   get frameM(): FrameMobject {
     return this.frameMobject;
   }
+}
+
+/**
+ * ZoomedCamera — MovingCamera plus a second, smaller "zoomed display"
+ * frame (real ManimCE `ZoomedScene`'s `zoomed_camera`). The main frame
+ * behaves exactly like MovingCamera; `zoomedFrame` is an independent
+ * Frame that a `ZoomedScene` renders into a small inset viewport.
+ */
+export class ZoomedCamera extends MovingCamera {
+  zoomedFrame: Frame = {
+    center: [0, 0, 0],
+    width: FRAME_WIDTH * 0.3,
+    height: FRAME_HEIGHT * 0.3,
+    rotation: 0,
+  };
+  zoomFactor = 2;
+
+  zoomedFrameMobject(): FrameMobject {
+    const proxyCamera = new Camera();
+    proxyCamera.frame = this.zoomedFrame;
+    const fm = new FrameMobject(proxyCamera);
+    return fm;
+  }
+}
+
+/* ==================================================================== */
+/* ThreeDCamera — Euler-angle 3D camera (doc 06 §7, doc 08 §2.2)         */
+/* ==================================================================== */
+
+/**
+ * ThreeDCamera — perspective camera matching real ManimCE's `ThreeDCamera`
+ * naming:
+ *   - `phi`   — polar angle from +Z (0 = looking straight down +Z axis)
+ *   - `theta` — azimuthal angle around Z
+ *   - `gamma` — roll (rotation about the view direction)
+ *   - `focalDistance` — distance from the eye to `frameCenter` (dolly)
+ *   - `zoom`  — multiplies the effective field of view (>1 = zoomed in)
+ *   - `lightSource` — a `Light` mobject the WebGL renderer reads for
+ *     Lambert shading (doc 06 §7 `lightSource: Mobject`)
+ *
+ * The eye position is derived from spherical coordinates around
+ * `frameCenter`, exactly like ManimCE/ManimGL's convention, so
+ * `setCameraOrientation({ phi: 75*DEGREES, theta: -45*DEGREES })` ports.
+ */
+export class ThreeDCamera extends Camera {
+  phi = 0; // 0 = top-down (looking along -Z), matches Manim's default
+  theta = -Math.PI / 2;
+  gamma = 0;
+  focalDistance = 20;
+  distance = 8; // eye-to-frameCenter radius (Manim's default ~ zoom-dependent)
+  zoom = 1;
+  frameCenter: Vec3 = [0, 0, 0];
+  fovDegrees = 45;
+  lightSource: Light = defaultLight();
+  ambientRotationRate = 0; // radians/sec around Z; set by beginAmbientCameraRotation
+
+  /** Eye (camera world position) from spherical (distance, phi, theta). */
+  getEye(): Vec3 {
+    const r = this.distance;
+    const sinPhi = Math.sin(this.phi), cosPhi = Math.cos(this.phi);
+    const sinTheta = Math.sin(this.theta), cosTheta = Math.cos(this.theta);
+    return add(this.frameCenter, [
+      r * sinPhi * cosTheta,
+      r * sinPhi * sinTheta,
+      r * cosPhi,
+    ] as Vec3);
+  }
+
+  getUp(): Vec3 {
+    // Roll (gamma) rotates the up vector about the view axis.
+    const base: Vec3 = [0, 0, 1];
+    const viewDir = norm(sub(this.frameCenter, this.getEye()));
+    return rotatePoint(base, this.gamma, viewDir, [0, 0, 0]);
+  }
+
+  viewMatrix(): Mat4 {
+    return mat4.lookAt(this.getEye(), this.frameCenter, this.getUp());
+  }
+
+  projectionMatrix(aspect: number): Mat4 {
+    const fov = (this.fovDegrees * Math.PI / 180) / Math.max(this.zoom, 1e-3);
+    return mat4.perspective(fov, aspect, 0.1, 1000);
+  }
+
+  setCameraOrientation(opts: { phi?: number; theta?: number; gamma?: number; distance?: number; zoom?: number; frameCenter?: Vec3 } = {}): void {
+    if (opts.phi !== undefined) this.phi = opts.phi;
+    if (opts.theta !== undefined) this.theta = opts.theta;
+    if (opts.gamma !== undefined) this.gamma = opts.gamma;
+    if (opts.distance !== undefined) this.distance = opts.distance;
+    if (opts.zoom !== undefined) this.zoom = opts.zoom;
+    if (opts.frameCenter !== undefined) this.frameCenter = v(opts.frameCenter);
+  }
+
+  /** Smoothly animated camera move (Player/Scene call this across a runTime;
+   *  Lumina's record-then-seek architecture applies it via a CameraMoveAnimation
+   *  registered in animations/movement.ts, this method is the raw setter). */
+  moveCamera(opts: { phi?: number; theta?: number; gamma?: number; distance?: number; zoom?: number; frameCenter?: Vec3 } = {}): void {
+    this.setCameraOrientation(opts);
+  }
+
+  beginAmbientCameraRotation(rate = 0.1): void {
+    this.ambientRotationRate = rate;
+  }
+
+  stopAmbientCameraRotation(): void {
+    this.ambientRotationRate = 0;
+  }
+
+  /** Called each frame by Scene.updateSelf if ambient rotation is active. */
+  tickAmbient(dt: number): void {
+    if (this.ambientRotationRate !== 0) this.theta += this.ambientRotationRate * dt;
+  }
+}
+
+/**
+ * World point (with optional per-point `fixedInFrame` override handled by
+ * the renderer, not here) → normalized device coords via the 3D camera.
+ * Returned z is the clip-space depth (for painter's-algorithm sort/z-test).
+ */
+export function projectPoint3D(cam: ThreeDCamera, p: Vec3, aspect: number): Vec3 {
+  const view = cam.viewMatrix();
+  const proj = cam.projectionMatrix(aspect);
+  const vp = mat4.mul(proj, view);
+  const x = vp[0] * p[0] + vp[4] * p[1] + vp[8] * p[2] + vp[12];
+  const y = vp[1] * p[0] + vp[5] * p[1] + vp[9] * p[2] + vp[13];
+  const z = vp[2] * p[0] + vp[6] * p[1] + vp[10] * p[2] + vp[14];
+  const w = vp[3] * p[0] + vp[7] * p[1] + vp[11] * p[2] + vp[15];
+  const invW = w !== 0 ? 1 / w : 1;
+  return [x * invW, y * invW, z * invW];
 }
