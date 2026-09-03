@@ -2,6 +2,7 @@
   "name": "lumina",
   "version": "0.1.0",
   "type": "module",
+  "license": "MIT",
   "description": "Lumina — a from-scratch, browser-native JavaScript animation engine for Manim/3Blue1Brown-style explainer videos, math/physics/CS/AI-ML visualizations, and interactive educational embeds.",
   "scripts": {
     "dev": "vite",
