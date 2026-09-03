@@ -94,7 +94,7 @@ Please confirm or override before any code is written:
 5. **Math typesetting.** KaTeX in the browser. Optional later Typst-to-SVG if a WASM build is acceptable.
 6. **Player.** First-party `<lumina-player>` custom element + JS `Player` class. Not video.js, not YouTube.
 7. **Scope of v1 vs later.** See [10-BUILD-PLAN.md](10-BUILD-PLAN.md). v1 = 2D core + player + embed + math pack. 3D, physics, CS, AI/ML packs follow.
-8. **License.** MIT recommended (same as ManimCE, ManimGL, manim-web, Three.js). Confirm.
+8. **License.** MIT recommended (same as ManimCE, ManimGL, manim-web, Three.js). **Confirmed** — see `/LICENSE` and `package.json`'s `license` field.
 
 ---
 

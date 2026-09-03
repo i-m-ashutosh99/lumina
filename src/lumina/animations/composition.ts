@@ -32,11 +32,26 @@ interface Timing {
   end: number;
 }
 
-/** Split `(...args)` into `{ anims, opts }` where a trailing plain object
- *  (or a single leading array) may carry composition options. */
+/** Split `(...args)` into `{ anims, opts }`. Supports two call forms:
+ *    (anim1, anim2, ..., opts?)      — variadic, trailing plain-object opts
+ *    ([anim1, anim2, ...], opts?)    — single leading array, trailing opts
+ *  The array form is unambiguous regardless of how many total arguments
+ *  follow it (fixes a bug where `new AnimationGroup([a, b], opts)` — the
+ *  exact form `LaggedStart`/`Succession`/`LaggedStartMap` use internally —
+ *  was being mis-parsed as a single animation-like arg `[a, b]` plus opts,
+ *  then crashing because `prepareAnimation` was called on the array itself
+ *  instead of on each element). */
 function splitAnimsOpts(args: any[]): { anims: Animation[]; opts: CompositionOptions } {
+  if (args.length >= 1 && Array.isArray(args[0])) {
+    const arr = args[0];
+    const maybeOpts = args[1];
+    const opts: CompositionOptions =
+      args.length > 1 && maybeOpts && typeof maybeOpts === 'object' && !(maybeOpts instanceof Animation)
+        ? maybeOpts
+        : {};
+    return { anims: arr.map((a: any) => prepareAnimation(a)), opts };
+  }
   let raw = args;
-  if (raw.length === 1 && Array.isArray(raw[0])) raw = raw[0];
   let opts: CompositionOptions = {};
   const last = raw[raw.length - 1];
   const isAnimLike = last instanceof Animation || (last && last.mobject instanceof Mobject && last.target instanceof Mobject);

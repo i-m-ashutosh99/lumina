@@ -20,10 +20,10 @@ export const ApiThreeDPage: FC = () => (
       <M sig="new Prism({ width?, height?, depth? })" desc="Rectangular box (general cuboid)" />
       <M sig="new Cylinder({ radius?, height?, resolution? })" desc="Capped cylinder" />
       <M sig="new Cone({ radius?, height?, resolution? })" desc="Capped cone" />
-      <M sig="new Torus({ majorRadius?, minorRadius?, resolution? })" desc="Donut" />
+      <M sig="new Torus({ radius?, tubeRadius?, color? })" desc="Donut (resolution fixed at 32×16 segments)" />
       <M sig="new Tetrahedron() / Octahedron() / Icosahedron() / Dodecahedron()" desc="Platonic solids" />
       <M sig="polyhedron(kind, opts?): MeshMobject" desc="Factory function for the four Platonic solids above by name" />
-      <M sig="new Dot3D({ point?, radius? })" desc="Small Sphere, the 3D analogue of Dot" />
+      <M sig="new Dot3D(point?: Vec3, { radius?, color? })" desc="Small Sphere, the 3D analogue of Dot (point is positional, not in the options object)" />
       <M sig="new Line3D(start, end, { thickness? })" desc="Thin cylinder standing in for a 3D line segment" />
       <M sig="new Arrow3D(start, end, opts?)" desc="Group: Line3D + Cone tip" />
     </ul>
