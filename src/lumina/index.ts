@@ -26,7 +26,7 @@ export { Mobject, AnimationBuilder, buildAnimateProxy } from './core/mobject';
 export type { Updater, Snapshot } from './core/mobject';
 export { VMobject, VectorizedPoint, CurvesAsSubmobjects } from './core/vmobject';
 export { MeshMobject } from './core/mesh-mobject';
-export type { MeshStyle } from './core/mesh-mobject';
+export type { MeshStyle, MeshTexture } from './core/mesh-mobject';
 export { Group, VGroup, VDict } from './core/group';
 export { Animation, prepareAnimation, registerTransformFactory } from './core/animation';
 export type { AnimOptions } from './core/animation';

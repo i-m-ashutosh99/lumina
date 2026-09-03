@@ -28,6 +28,9 @@ export interface WebGLRenderStats {
   ms: number;
 }
 
+// Flat-color shader (every MeshMobject without a bound texture) — layout
+// locations 0/1 shared with the textured variant below so a single VAO-less
+// bind sequence (positions -> loc 0, normals -> loc 1) works for both.
 const VERT_SRC = `#version 300 es
 precision highp float;
 layout(location = 0) in vec3 aPosition;
@@ -67,15 +70,80 @@ void main() {
 }
 `;
 
+// Textured shader (doc 13 audit gap G16 "3D follow-ups: textures") — adds a
+// UV attribute (location 2) and samples `uDayTex`, blending toward
+// `uNightTex` on the fragment's unlit hemisphere (real ManimCE
+// `TexturedSurface` day/night blend by `diff`, its "how directly the
+// fragment faces the light" term — same `diff` the flat shader already
+// computes for its Lambert term, reused here as the blend factor).
+const TEX_VERT_SRC = `#version 300 es
+precision highp float;
+layout(location = 0) in vec3 aPosition;
+layout(location = 1) in vec3 aNormal;
+layout(location = 2) in vec2 aUv;
+uniform mat4 uView;
+uniform mat4 uProjection;
+out vec3 vNormal;
+out vec3 vWorldPos;
+out vec2 vUv;
+void main() {
+  vWorldPos = aPosition;
+  vNormal = aNormal;
+  vUv = aUv;
+  gl_Position = uProjection * uView * vec4(aPosition, 1.0);
+}
+`;
+
+const TEX_FRAG_SRC = `#version 300 es
+precision highp float;
+in vec3 vNormal;
+in vec3 vWorldPos;
+in vec2 vUv;
+uniform float uOpacity;
+uniform vec3 uLightPos;
+uniform vec3 uLightColor;
+uniform float uLightIntensity;
+uniform float uAmbient;
+uniform float uShaded;
+uniform int uLightKind;
+uniform sampler2D uDayTex;
+uniform sampler2D uNightTex;
+uniform bool uHasNight;
+out vec4 fragColor;
+void main() {
+  vec3 N = normalize(vNormal);
+  vec3 L = (uLightKind == 1) ? normalize(uLightPos) : normalize(uLightPos - vWorldPos);
+  float diff = max(dot(N, L), 0.0);
+  float lit = uAmbient + (1.0 - uAmbient) * diff * uLightIntensity;
+  lit = mix(1.0, lit, uShaded);
+  vec3 dayColor = texture(uDayTex, vUv).rgb;
+  vec3 base = dayColor;
+  if (uHasNight) {
+    vec3 nightColor = texture(uNightTex, vUv).rgb;
+    // diff in [0,1]: 1 = fully lit (day-facing), 0 = fully dark (night side).
+    base = mix(nightColor, dayColor, clamp(diff, 0.0, 1.0));
+  }
+  vec3 rgb = base * lit * uLightColor;
+  fragColor = vec4(rgb, uOpacity);
+}
+`;
+
 interface GPUMeshRecord {
   positionBuffer: WebGLBuffer;
   normalBuffer: WebGLBuffer;
+  uvBuffer: WebGLBuffer | null;
   indexBuffer: WebGLBuffer;
   indexCount: number;
   wireframeBuffer: WebGLBuffer | null;
   wireframeCount: number;
   lastPositions: Vec3[] | null;
   lastIndices: number[] | null;
+  lastUvs: [number, number][] | null;
+}
+
+interface GPUTextureRecord {
+  texture: WebGLTexture;
+  lastSource: HTMLImageElement | ImageBitmap | null;
 }
 
 function hexToRgb01(c: string): [number, number, number] {
@@ -102,7 +170,26 @@ export class WebGLRenderer {
   private uShaded: WebGLUniformLocation | null;
   private uLightKind: WebGLUniformLocation | null;
 
+  // Textured-surface program (doc 13 audit gap G16) — separate program
+  // object since it has an extra vertex attribute (UV) and two sampler
+  // uniforms; kept as a fully independent pipeline rather than branching
+  // inside one shader so the common (untextured) draw path pays zero cost.
+  private texProgram: WebGLProgram;
+  private tuView: WebGLUniformLocation | null;
+  private tuProjection: WebGLUniformLocation | null;
+  private tuOpacity: WebGLUniformLocation | null;
+  private tuLightPos: WebGLUniformLocation | null;
+  private tuLightColor: WebGLUniformLocation | null;
+  private tuLightIntensity: WebGLUniformLocation | null;
+  private tuAmbient: WebGLUniformLocation | null;
+  private tuShaded: WebGLUniformLocation | null;
+  private tuLightKind: WebGLUniformLocation | null;
+  private tuDayTex: WebGLUniformLocation | null;
+  private tuNightTex: WebGLUniformLocation | null;
+  private tuHasNight: WebGLUniformLocation | null;
+
   private cache = new WeakMap<MeshMobject, GPUMeshRecord>();
+  private texCache = new WeakMap<HTMLImageElement | ImageBitmap, GPUTextureRecord>();
 
   constructor(public canvas: HTMLCanvasElement, public camera: ThreeDCamera) {
     const gl = canvas.getContext('webgl2', { alpha: true, antialias: true, premultipliedAlpha: false });
@@ -119,6 +206,20 @@ export class WebGLRenderer {
     this.uAmbient = gl.getUniformLocation(this.program, 'uAmbient');
     this.uShaded = gl.getUniformLocation(this.program, 'uShaded');
     this.uLightKind = gl.getUniformLocation(this.program, 'uLightKind');
+
+    this.texProgram = this.compileProgram(TEX_VERT_SRC, TEX_FRAG_SRC);
+    this.tuView = gl.getUniformLocation(this.texProgram, 'uView');
+    this.tuProjection = gl.getUniformLocation(this.texProgram, 'uProjection');
+    this.tuOpacity = gl.getUniformLocation(this.texProgram, 'uOpacity');
+    this.tuLightPos = gl.getUniformLocation(this.texProgram, 'uLightPos');
+    this.tuLightColor = gl.getUniformLocation(this.texProgram, 'uLightColor');
+    this.tuLightIntensity = gl.getUniformLocation(this.texProgram, 'uLightIntensity');
+    this.tuAmbient = gl.getUniformLocation(this.texProgram, 'uAmbient');
+    this.tuShaded = gl.getUniformLocation(this.texProgram, 'uShaded');
+    this.tuLightKind = gl.getUniformLocation(this.texProgram, 'uLightKind');
+    this.tuDayTex = gl.getUniformLocation(this.texProgram, 'uDayTex');
+    this.tuNightTex = gl.getUniformLocation(this.texProgram, 'uNightTex');
+    this.tuHasNight = gl.getUniformLocation(this.texProgram, 'uHasNight');
   }
 
   private compileProgram(vsSrc: string, fsSrc: string): WebGLProgram {
@@ -165,14 +266,27 @@ export class WebGLRenderer {
       rec = {
         positionBuffer: gl.createBuffer()!,
         normalBuffer: gl.createBuffer()!,
+        uvBuffer: null,
         indexBuffer: gl.createBuffer()!,
         indexCount: 0,
         wireframeBuffer: null,
         wireframeCount: 0,
         lastPositions: null,
         lastIndices: null,
+        lastUvs: null,
       };
       this.cache.set(m, rec);
+    }
+    if (m.texture?.dayImage && rec.lastUvs !== m.uvs) {
+      const flatUv = new Float32Array(m.uvs.length * 2);
+      for (let i = 0; i < m.uvs.length; i++) {
+        flatUv[i * 2] = m.uvs[i][0];
+        flatUv[i * 2 + 1] = m.uvs[i][1];
+      }
+      rec.uvBuffer = rec.uvBuffer ?? gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, rec.uvBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, flatUv, gl.DYNAMIC_DRAW);
+      rec.lastUvs = m.uvs;
     }
     if (rec.lastPositions !== m.positions) {
       const flatPos = new Float32Array(m.positions.length * 3);
@@ -217,6 +331,26 @@ export class WebGLRenderer {
     return rec;
   }
 
+  /** Upload (once) + cache a `HTMLImageElement`/`ImageBitmap` as a
+   *  `WebGLTexture`, keyed by object identity so the same decoded image
+   *  reused across multiple `TexturedSurface`s (or re-rendered every frame
+   *  of a seek) is uploaded to the GPU exactly once. */
+  private getOrBuildTexture(img: HTMLImageElement | ImageBitmap): WebGLTexture {
+    const gl = this.gl;
+    let rec = this.texCache.get(img);
+    if (rec && rec.lastSource === img) return rec.texture;
+    const texture = gl.createTexture()!;
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    this.texCache.set(img, { texture, lastSource: img });
+    return texture;
+  }
+
   /** Collect drawable MeshMobjects from scene roots (family-wide). */
   private collect(roots: Mobject[]): MeshMobject[] {
     const out: MeshMobject[] = [];
@@ -254,14 +388,6 @@ export class WebGLRenderer {
     const light = this.camera.lightSource;
     const uniforms = light.uniforms();
 
-    gl.useProgram(this.program);
-    gl.uniformMatrix4fv(this.uView, false, view);
-    gl.uniformMatrix4fv(this.uProjection, false, proj);
-    gl.uniform3fv(this.uLightPos, uniforms.position);
-    gl.uniform3fv(this.uLightColor, uniforms.color);
-    gl.uniform1f(this.uLightIntensity, uniforms.intensity);
-    gl.uniform1i(this.uLightKind, uniforms.kind);
-
     // Painter's algorithm: back-to-front by distance from eye (handles the
     // common case of a few dozen translucent solids correctly enough for v1).
     const sorted = [...meshes].sort((a, b) => {
@@ -270,22 +396,82 @@ export class WebGLRenderer {
       return db - da;
     });
 
+    // Track which program is currently bound so mixed textured/untextured
+    // scenes don't re-bind + re-set camera/light uniforms on every draw call
+    // (only when the mesh actually needs the other pipeline).
+    let activeProgram: 'flat' | 'tex' | null = null;
+    const bindFlat = () => {
+      if (activeProgram === 'flat') return;
+      activeProgram = 'flat';
+      gl.useProgram(this.program);
+      gl.uniformMatrix4fv(this.uView, false, view);
+      gl.uniformMatrix4fv(this.uProjection, false, proj);
+      gl.uniform3fv(this.uLightPos, uniforms.position);
+      gl.uniform3fv(this.uLightColor, uniforms.color);
+      gl.uniform1f(this.uLightIntensity, uniforms.intensity);
+      gl.uniform1i(this.uLightKind, uniforms.kind);
+    };
+    const bindTex = () => {
+      if (activeProgram === 'tex') return;
+      activeProgram = 'tex';
+      gl.useProgram(this.texProgram);
+      gl.uniformMatrix4fv(this.tuView, false, view);
+      gl.uniformMatrix4fv(this.tuProjection, false, proj);
+      gl.uniform3fv(this.tuLightPos, uniforms.position);
+      gl.uniform3fv(this.tuLightColor, uniforms.color);
+      gl.uniform1f(this.tuLightIntensity, uniforms.intensity);
+      gl.uniform1i(this.tuLightKind, uniforms.kind);
+    };
+
     let drawn = 0;
     for (const m of sorted) {
       const rec = this.getOrBuildRecord(m);
       if (rec.indexCount === 0) continue;
-      const [cr, cg, cb] = hexToRgb01(m.meshStyle.color);
-      gl.uniform3f(this.uColor, cr, cg, cb);
-      gl.uniform1f(this.uOpacity, m.meshStyle.opacity);
-      gl.uniform1f(this.uAmbient, 0.35);
-      gl.uniform1f(this.uShaded, m.meshStyle.shaded ? m.meshStyle.shadeIntensity : 0);
 
-      gl.bindBuffer(gl.ARRAY_BUFFER, rec.positionBuffer);
-      gl.enableVertexAttribArray(0);
-      gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
-      gl.bindBuffer(gl.ARRAY_BUFFER, rec.normalBuffer);
-      gl.enableVertexAttribArray(1);
-      gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 0, 0);
+      const textured = !!(m.texture?.dayImage && rec.uvBuffer);
+      if (textured) {
+        bindTex();
+        const dayTex = this.getOrBuildTexture(m.texture!.dayImage!);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, dayTex);
+        gl.uniform1i(this.tuDayTex, 0);
+        const hasNight = !!m.texture!.nightImage;
+        gl.uniform1i(this.tuHasNight, hasNight ? 1 : 0);
+        if (hasNight) {
+          const nightTex = this.getOrBuildTexture(m.texture!.nightImage!);
+          gl.activeTexture(gl.TEXTURE1);
+          gl.bindTexture(gl.TEXTURE_2D, nightTex);
+          gl.uniform1i(this.tuNightTex, 1);
+        }
+        gl.uniform1f(this.tuOpacity, m.meshStyle.opacity);
+        gl.uniform1f(this.tuAmbient, 0.35);
+        gl.uniform1f(this.tuShaded, m.meshStyle.shaded ? m.meshStyle.shadeIntensity : 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, rec.positionBuffer);
+        gl.enableVertexAttribArray(0);
+        gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, rec.normalBuffer);
+        gl.enableVertexAttribArray(1);
+        gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, rec.uvBuffer!);
+        gl.enableVertexAttribArray(2);
+        gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 0, 0);
+      } else {
+        bindFlat();
+        const [cr, cg, cb] = hexToRgb01(m.meshStyle.color);
+        gl.uniform3f(this.uColor, cr, cg, cb);
+        gl.uniform1f(this.uOpacity, m.meshStyle.opacity);
+        gl.uniform1f(this.uAmbient, 0.35);
+        gl.uniform1f(this.uShaded, m.meshStyle.shaded ? m.meshStyle.shadeIntensity : 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, rec.positionBuffer);
+        gl.enableVertexAttribArray(0);
+        gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, rec.normalBuffer);
+        gl.enableVertexAttribArray(1);
+        gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 0, 0);
+        gl.disableVertexAttribArray(2);
+      }
 
       if (m.meshStyle.wireframe && rec.wireframeBuffer && rec.wireframeCount > 0) {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, rec.wireframeBuffer);

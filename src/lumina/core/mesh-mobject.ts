@@ -28,6 +28,20 @@ export interface MeshStyle {
   shadeIntensity: number;
 }
 
+/**
+ * Optional image-texture binding (doc 07 §9 `TexturedSurface(surface,
+ * dayUrl, nightUrl?)`, doc 13 audit gap G16). Populated by `TexturedSurface`
+ * (`mobjects/three-d/solids.ts`) once its `ready` promise resolves;
+ * `renderers/webgl.ts` samples `dayImage`/`nightImage` (real ManimCE's
+ * day/night texture blend, mixed by how much each fragment's normal faces
+ * the light) instead of the flat `meshStyle.color` whenever `dayImage` is
+ * set. Left `null` for every other MeshMobject — zero cost when unused.
+ */
+export interface MeshTexture {
+  dayImage: HTMLImageElement | ImageBitmap | null;
+  nightImage: HTMLImageElement | ImageBitmap | null;
+}
+
 export class MeshMobject extends Mobject {
   positions: Vec3[] = [];
   normals: Vec3[] = [];
@@ -41,6 +55,9 @@ export class MeshMobject extends Mobject {
     shaded: true,
     shadeIntensity: 1,
   };
+
+  /** null unless a texture has been bound (see `MeshTexture` doc above). */
+  texture: MeshTexture | null = null;
 
   constructor(mesh?: MeshData, opts?: any) {
     super(opts);
@@ -121,6 +138,7 @@ export class MeshMobject extends Mobject {
     c.uvs = this.uvs.map((u) => [...u] as [number, number]);
     c.indices = [...this.indices];
     c.meshStyle = { ...this.meshStyle };
+    c.texture = this.texture; // images are shared (immutable), not cloned
     c.points = c.positions;
     return c;
   }
