@@ -561,13 +561,28 @@ export class TransformMatchingShapes extends TransformMatchingAbstractBase {
   }
 }
 
-/** Match MathTex submobjects by tex string (formula morph). */
+/**
+ * Match MathTex submobjects by tex string (formula morph).
+ *
+ * Matches individual LEAF mobjects (not `VGroup` containers) tagged with a
+ * `.tex`/`.texString` field, because `Transform`'s point-alignment
+ * (`VMobject.alignPointsBidirectional`) only operates on a mobject's OWN
+ * `points` array — a `VGroup`'s own `points` is always empty (its geometry
+ * lives entirely in its children), so `new Transform(groupA, groupB)`
+ * would silently be a visual no-op even though the match succeeded. Real
+ * `MathTex` (`mathtex.ts`) therefore tags `.tex` on every individual glyph
+ * LEAF with its enclosing part's source text (not just on the
+ * `MathTexPart` container) — every leaf sharing the same `.tex` value
+ * pairs up in source-order-vs-target-order (matching real Manim's
+ * family-order pairing for multi-glyph parts, e.g. `"dx"`'s `d` and `x`
+ * leaves each match their counterpart in the target by position).
+ */
 export class TransformMatchingTex extends TransformMatchingAbstractBase {
   getKeys(m: Mobject): Map<Mobject, string> {
     const map = new Map<Mobject, string>();
     const visit = (node: Mobject) => {
       for (const c of node.children) visit(c);
-      if (!node.isGroup && (node as any).tex !== undefined) {
+      if (!node.isGroup && node.points.length && (node as any).tex !== undefined) {
         map.set(node, (node as any).tex);
       } else if (!node.isGroup && node.points.length && (node as any).texString !== undefined) {
         map.set(node, (node as any).texString);

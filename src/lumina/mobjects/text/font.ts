@@ -75,7 +75,16 @@ export function glyphToCubics(font: any, glyphName: string, size: number): { cub
   const cubics: Vec3[] = [];
   let start: Vec3 = [0, 0, 0];
   let cur: Vec3 = [0, 0, 0];
-  const P = (x: number, y: number): Vec3 => [x, y, 0];
+  // BUG FIX (2026 audit): opentype.js's Glyph.getPath() already negates y
+  // internally (TrueType raw glyph space is y-up with baseline at 0; getPath
+  // emits `y: -rawY * scale`, i.e. SVG/canvas y-DOWN convention — verified
+  // empirically: raw 'L' has yMax=+1456 (top, above baseline), but
+  // getPath(...).commands report that same top point at y=-71 <0). Lumina's
+  // world space is y-UP (matches Manim). Previously this function used
+  // `cmd.y`/`cmd.y1`/`cmd.y2` directly, silently rendering every glyph
+  // upside-down (mirrored across the baseline). Negate again here to
+  // convert getPath's y-down output back to Lumina's y-up world.
+  const P = (x: number, y: number): Vec3 => [x, -y, 0];
   for (const cmd of path.commands) {
     if (cmd.type === 'M') {
       cur = P(cmd.x, cmd.y);
