@@ -138,3 +138,11 @@ export type { MatrixBracket, MatrixEntry, MatrixOptions, TableOptions } from './
 // ---- code highlighting (doc 09 §10.4 — highlight.js token-only) ----
 export { Code, CodeBlock, DEFAULT_CODE_THEME } from './mobjects/data/code';
 export type { CodeOptions } from './mobjects/data/code';
+
+// ---- vector fields / stream lines (doc 02 §C, doc 09 §5 — audit gap G7) ----
+export {
+  VectorField, ArrowVectorField, ComplexVectorField, StreamLines, DEFAULT_FIELD_COLORS,
+} from './mobjects/fields/vector-field';
+export type {
+  Field2DFunc, VectorFieldOptions, ArrowVectorFieldOptions, StreamLinesOptions,
+} from './mobjects/fields/vector-field';
