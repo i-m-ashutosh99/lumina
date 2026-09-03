@@ -11,6 +11,14 @@ import { TextPage } from './site/pages/guides/text'
 import { Camera3DPage } from './site/pages/guides/camera-3d'
 import { UpdatersPage } from './site/pages/guides/updaters'
 import { ApiCorePage } from './site/pages/api/core'
+import { ApiGeometryPage } from './site/pages/api/geometry'
+import { ApiThreeDPage } from './site/pages/api/three-d'
+import { ApiAnimationsPage } from './site/pages/api/animations'
+import { ApiTextPage } from './site/pages/api/text'
+import { ApiCamerasRenderersPage } from './site/pages/api/cameras-renderers'
+import { GalleryPage } from './site/pages/gallery'
+import { DeployNpmPage } from './site/pages/deployment/npm'
+import { DeployCloudflarePage } from './site/pages/deployment/cloudflare'
 
 const app = new Hono()
 
@@ -31,6 +39,14 @@ docsPage('/guides/text', 'Text & Typography', TextPage)
 docsPage('/guides/camera-3d', '3D, Camera & Lighting', Camera3DPage)
 docsPage('/guides/updaters', 'Updaters & ValueTrackers', UpdatersPage)
 docsPage('/api/core', 'API: Core', ApiCorePage)
+docsPage('/api/geometry', 'API: Geometry', ApiGeometryPage)
+docsPage('/api/three-d', 'API: 3D', ApiThreeDPage)
+docsPage('/api/animations', 'API: Animations', ApiAnimationsPage)
+docsPage('/api/text', 'API: Text', ApiTextPage)
+docsPage('/api/cameras-renderers', 'API: Cameras & Renderers', ApiCamerasRenderersPage)
+docsPage('/gallery', 'Demo Gallery', GalleryPage)
+docsPage('/deployment/npm', 'Publishing to npm', DeployNpmPage)
+docsPage('/deployment/cloudflare', 'Hosting on Cloudflare', DeployCloudflarePage)
 
 // Engine dev-preview smoke test (Canvas2D), kept at a separate path so it
 // doesn't collide with the docs home page above. Uses its own minimal
