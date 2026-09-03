@@ -104,3 +104,16 @@ export * from './animations/transform';
 export * from './animations/indication';
 export * from './animations/movement';
 export * from './animations/changing';
+
+// ---- player + export (doc 08) ----
+export { Player } from './player/player';
+export type { PlayerOptions, PlayerEvent } from './player/player';
+export { LuminaPlayerElement, register as registerScene } from './player/element';
+export { exportWebm, downloadWebm } from './export/webm';
+export type { WebmExportOptions } from './export/webm';
+export { exportGif, downloadGif } from './export/gif';
+export type { GifExportOptions } from './export/gif';
+export {
+  exportPngSequence, downloadPngSequence, screenshot, downloadScreenshot,
+} from './export/png';
+export type { PngSequenceOptions, PngFrame } from './export/png';
