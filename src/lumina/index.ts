@@ -117,3 +117,13 @@ export {
   exportPngSequence, downloadPngSequence, screenshot, downloadScreenshot,
 } from './export/png';
 export type { PngSequenceOptions, PngFrame } from './export/png';
+
+// ---- boolean ops (doc 09 §15 — polygon-clipping based path booleans) ----
+export { Union, Intersection, Difference, Exclusion } from './mobjects/boolean/boolean-ops';
+export type { BooleanOpOptions } from './mobjects/boolean/boolean-ops';
+
+// ---- graph / digraph (doc 09 §10.2 — core substrate + algorithm layer) ----
+export { Graph, DiGraph, registerGraphTextCtor } from './mobjects/graph/graph';
+export type {
+  VertexId, EdgeKey, LayoutName, GraphOptions, AlgoAnimOptions,
+} from './mobjects/graph/graph';

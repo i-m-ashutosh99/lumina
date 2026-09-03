@@ -23,6 +23,7 @@ import { resolveColor } from '../../math/color';
 import { DEFAULT_FONT_SIZE } from '../../math/constants';
 import { loadFont, glyphToCubics } from './font';
 import { registerTextCtor } from '../geometry/basic';
+import { registerGraphTextCtor } from '../graph/graph';
 
 /** World-units-per-"pixel" conversion: Manim's font_size is in points at
  * a notional 96dpi-ish scale; we pick a constant so `fontSize: 48` (the
@@ -142,6 +143,7 @@ export class Text extends VGroup {
   }
 }
 registerTextCtor(Text as any);
+registerGraphTextCtor(Text as any);
 
 /** Multi-paragraph text: identical to Text but preserves explicit line
  * breaks as separate top-level rows (Manim's Paragraph groups lines so
