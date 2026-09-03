@@ -31,15 +31,24 @@ export class Canvas2DRenderer {
     this.canvas.style.height = `${cssHeight}px`;
   }
 
-  /** Render one frame of the given mobject roots. */
-  render(mobjects: Mobject[], background = '#000000'): RenderStats {
+  /**
+   * Render one frame of the given mobject roots.
+   * `transparent`: when true, clear to transparent instead of filling
+   * `background` — used by ThreeDScene to composite this 2D layer OVER an
+   * already-drawn WebGL 3D layer beneath it (doc 08 §2.1 hybrid stack).
+   */
+  render(mobjects: Mobject[], background = '#000000', opts: { transparent?: boolean } = {}): RenderStats {
     const t0 = performance.now();
     const ctx = this.ctx;
     const W = this.canvas.width;
     const H = this.canvas.height;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = background;
-    ctx.fillRect(0, 0, W, H);
+    if (opts.transparent) {
+      ctx.clearRect(0, 0, W, H);
+    } else {
+      ctx.fillStyle = background;
+      ctx.fillRect(0, 0, W, H);
+    }
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
 
     const pxW = W / this.dpr;

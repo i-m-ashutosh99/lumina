@@ -42,8 +42,9 @@ import { resolveRateFunc } from '../math/rate-functions';
 import { Wait } from '../animations/creation';
 import { Timeline } from './timeline';
 import { Clock } from './clock';
-import { Camera } from '../cameras/camera';
+import { Camera, ThreeDCamera } from '../cameras/camera';
 import { Canvas2DRenderer } from '../renderers/canvas2d';
+import { WebGLRenderer } from '../renderers/webgl';
 import { Random } from '../math/rng';
 import { normalizeOptions } from './style';
 import { Vec3 } from '../math/vec';
@@ -90,13 +91,13 @@ export class Scene {
   background = '#000000';
   fps = 60;
 
-  private updaters: Array<(dt: number) => void> = [];
-  private exposed: ExposedTracker[] = [];
-  private renderer: Canvas2DRenderer | null = null;
-  private canvas: HTMLCanvasElement | null = null;
-  private overlay: HTMLElement | null = null;
-  private rafHandle: number | null = null;
-  private playing = false;
+  protected updaters: Array<(dt: number) => void> = [];
+  protected exposed: ExposedTracker[] = [];
+  protected renderer: Canvas2DRenderer | null = null;
+  protected canvas: HTMLCanvasElement | null = null;
+  protected overlay: HTMLElement | null = null;
+  protected rafHandle: number | null = null;
+  protected playing = false;
 
   constructor(mount?: string | HTMLElement | Mount | null, options: SceneOptions = {}) {
     const o = normalizeOptions(options);
@@ -352,11 +353,19 @@ export class Scene {
    *  a scrubber). Mutates the recorded mobjects' points/style in place via
    *  `Timeline.render`, then draws whatever's currently a member. */
   renderAt(t: number): void {
-    const visible = this.timeline.render(t);
+    const drawList = this.getDrawList(t);
     if (!this.renderer) return;
+    this.renderer.render(drawList, this.background);
+  }
+
+  /** Subclass hook: the family of mobjects to hand to the renderer(s) at
+   *  time `t` (base Scene just returns everything visible on the timeline;
+   *  `ThreeDScene` reuses this to feed both the WebGL and Canvas2D layers). */
+  protected getDrawList(t: number): Mobject[] {
+    const visible = this.timeline.render(t);
     const drawList = visible.filter((m) => !this.foregroundMobjects.includes(m));
     drawList.push(...this.foregroundMobjects.filter((m) => visible.includes(m)));
-    this.renderer.render(drawList, this.background);
+    return drawList;
   }
 
   /** Draw the current live state without seeking (used right after a
@@ -419,4 +428,214 @@ import { MovingCamera } from '../cameras/camera';
  *  (`scene.camera.frame.animate.shift(...)` etc via `FrameMobject`). */
 export class MovingCameraScene extends Scene {
   camera: MovingCamera = new MovingCamera();
+}
+
+/**
+ * ThreeDScene — hosts a `ThreeDCamera` and composites an owned WebGL2 3D
+ * layer UNDER the existing Canvas2D 2D layer (doc 08 §2.1 hybrid stack,
+ * doc 07 §9 ThreeDScene API). 2D VMobjects (labels, HUD, `fixInFrame()`d
+ * overlays) keep drawing on top via the normal Canvas2D renderer; 3D
+ * MeshMobjects (Sphere/Cube/Surface/...) are drawn by the WebGL renderer.
+ *
+ * API mirrors real ManimCE's `ThreeDScene` naming exactly:
+ *   scene.setCameraOrientation({ phi, theta, gamma, zoom, frameCenter })
+ *   scene.moveCamera({ phi, theta, runTime })       // instant in v1 (see note)
+ *   scene.beginAmbientCameraRotation({ rate })
+ *   scene.stopAmbientCameraRotation()
+ *   scene.addFixedInFrame(mob)                       // HUD-style overlay
+ *   mob.fixInFrame()
+ *
+ * Note on `moveCamera({ runTime })`: real ManimCE animates the camera move
+ * over `runTime` as part of the Scene's frame loop. Lumina's record-then-
+ * seek architecture doesn't have a per-frame camera animation primitive
+ * yet (tracked in README gaps) — v1 applies the orientation change
+ * immediately. Use `beginAmbientCameraRotation` for a continuously
+ * animated camera (driven by `tickAmbient` every render tick), which DOES
+ * work smoothly since it's re-evaluated from `scene.time` on every seek.
+ */
+export class ThreeDScene extends Scene {
+  camera: ThreeDCamera = new ThreeDCamera();
+
+  private glCanvas: HTMLCanvasElement | null = null;
+  private glRenderer: WebGLRenderer | null = null;
+  private fixedInFrameMobjects: Mobject[] = [];
+
+  mount(target: string | HTMLElement | Mount, width = 1280, height = 720): void {
+    if (typeof document === 'undefined') return;
+    let el: HTMLElement | null = null;
+    if (typeof target === 'string') el = document.querySelector(target);
+    else if ((target as Mount).canvas) {
+      this.canvas = (target as Mount).canvas;
+      this.overlay = (target as Mount).overlay ?? null;
+    } else {
+      el = target as HTMLElement;
+    }
+    // Build a positioning host so the WebGL canvas can sit exactly behind
+    // the 2D canvas (doc 08 §2.1: two stacked absolutely-positioned canvases).
+    if (el && !this.canvas) {
+      const host = document.createElement('div');
+      host.style.position = 'relative';
+      host.style.width = `${width}px`;
+      host.style.height = `${height}px`;
+      const gl = document.createElement('canvas');
+      gl.style.position = 'absolute';
+      gl.style.left = '0';
+      gl.style.top = '0';
+      gl.style.display = 'block';
+      const c2d = document.createElement('canvas');
+      c2d.style.position = 'absolute';
+      c2d.style.left = '0';
+      c2d.style.top = '0';
+      c2d.style.display = 'block';
+      host.appendChild(gl);
+      host.appendChild(c2d);
+      el.appendChild(host);
+      this.glCanvas = gl;
+      this.canvas = c2d;
+    }
+    if (this.canvas) {
+      this.renderer = new Canvas2DRenderer(this.canvas, this.camera);
+      this.renderer.resize(width, height);
+    }
+    if (this.glCanvas) {
+      this.glRenderer = new WebGLRenderer(this.glCanvas, this.camera);
+      this.glRenderer.resize(width, height);
+    }
+  }
+
+  /** doc 07 §9: ThreeDCamera orientation setter, exposed at the Scene level
+   *  (real ManimCE puts these on Scene, delegating to self.camera). */
+  setCameraOrientation(opts: { phi?: number; theta?: number; gamma?: number; distance?: number; zoom?: number; frameCenter?: Vec3 } = {}): void {
+    this.camera.setCameraOrientation(normalizeOptions(opts));
+  }
+
+  moveCamera(opts: { phi?: number; theta?: number; gamma?: number; distance?: number; zoom?: number; frameCenter?: Vec3; runTime?: number } = {}): void {
+    this.camera.moveCamera(normalizeOptions(opts));
+  }
+
+  beginAmbientCameraRotation(opts: { rate?: number } = {}): void {
+    const o = normalizeOptions(opts);
+    this.camera.beginAmbientCameraRotation(o.rate ?? 0.1);
+  }
+
+  stopAmbientCameraRotation(): void {
+    this.camera.stopAmbientCameraRotation();
+  }
+
+  /** Register a mobject as HUD-style (always drawn in screen space,
+   *  ignoring the 3D camera) — real ManimCE `add_fixed_in_frame_mobjects`. */
+  addFixedInFrame(...mobs: Mobject[]): this {
+    for (const m of mobs) m.fixInFrame(true);
+    this.fixedInFrameMobjects.push(...mobs);
+    this.add(...mobs);
+    return this;
+  }
+
+  protected updateSelfWithAmbient(dt: number): void {
+    this.camera.tickAmbient(dt);
+  }
+
+  /** Render both layers: WebGL 3D underneath, Canvas2D 2D (transparent) on
+   *  top — the doc 08 §2.1 hybrid compositor. Ambient camera rotation (if
+   *  active) only advances via the live `startPlayback` loop below, since
+   *  `renderAt(t)` must stay a pure function of `t` for correct seeking. */
+  renderAt(t: number): void {
+    const drawList = this.getDrawList(t);
+    if (this.glRenderer) this.glRenderer.render(drawList, this.background);
+    if (this.renderer) this.renderer.render(drawList, this.background, { transparent: !!this.glRenderer });
+  }
+
+  startPlayback(fromT = this.clock.time): void {
+    if (typeof requestAnimationFrame === 'undefined') return;
+    this.playing = true;
+    this.clock.seek(fromT);
+    const step = (ts: number) => {
+      if (!this.playing) return;
+      const dt = this.clock.tick(ts);
+      this.camera.tickAmbient(dt);
+      if (this.clock.time >= this.timeline.duration && this.camera.ambientRotationRate === 0) {
+        this.clock.time = this.timeline.duration;
+        this.renderAt(this.clock.time);
+        this.playing = false;
+        return;
+      }
+      this.renderAt(this.clock.time);
+      this.rafHandle = requestAnimationFrame(step);
+    };
+    this.rafHandle = requestAnimationFrame(step);
+  }
+}
+
+/**
+ * ZoomedScene — a MovingCameraScene plus a small inset "zoomed display"
+ * viewport (real ManimCE `ZoomedScene`). v1: exposes `zoomedCamera` and a
+ * convenience `activateZooming()`; the inset is drawn by mounting a second
+ * Canvas2DRenderer against `zoomedCamera.zoomedFrame` — left as an authoring
+ * pattern (`scene.zoomedDisplayMount(el)`) rather than automatic DOM
+ * injection, since inset placement/size is presentation-specific.
+ */
+import { ZoomedCamera } from '../cameras/camera';
+
+export class ZoomedScene extends MovingCameraScene {
+  zoomedCameraObj: ZoomedCamera = new ZoomedCamera();
+  private zoomedRenderer: Canvas2DRenderer | null = null;
+
+  get zoomedCamera(): ZoomedCamera { return this.zoomedCameraObj; }
+
+  activateZooming(opts: { zoomFactor?: number; zoomedDisplayWidth?: number; zoomedDisplayHeight?: number } = {}): void {
+    const o = normalizeOptions(opts);
+    if (o.zoomFactor !== undefined) this.zoomedCameraObj.zoomFactor = o.zoomFactor;
+    if (o.zoomedDisplayWidth !== undefined) this.zoomedCameraObj.zoomedFrame.width = o.zoomedDisplayWidth;
+    if (o.zoomedDisplayHeight !== undefined) this.zoomedCameraObj.zoomedFrame.height = o.zoomedDisplayHeight;
+  }
+
+  /** Mount the small inset viewport into a separate DOM element. */
+  zoomedDisplayMount(el: HTMLElement, width = 300, height = 300): void {
+    if (typeof document === 'undefined') return;
+    const canvas = document.createElement('canvas');
+    canvas.style.display = 'block';
+    el.appendChild(canvas);
+    const proxyCamera = new Camera();
+    proxyCamera.frame = this.zoomedCameraObj.zoomedFrame;
+    this.zoomedRenderer = new Canvas2DRenderer(canvas, proxyCamera);
+    this.zoomedRenderer.resize(width, height);
+  }
+
+  renderAt(t: number): void {
+    super.renderAt(t);
+    if (this.zoomedRenderer) {
+      const drawList = this.getDrawList(t);
+      this.zoomedRenderer.render(drawList, this.background);
+    }
+  }
+}
+
+/**
+ * VectorScene — 2D-plane-plus-vectors convenience scene (real ManimCE
+ * `VectorScene`): helpers for drawing labeled vectors on an implicit plane.
+ * Kept intentionally thin — `NumberPlane`/`Axes` (doc 09, not yet
+ * implemented) will subsume most of this once graphing lands; v1 exposes
+ * the vector-drawing helpers real Manim scripts call most.
+ */
+export class VectorScene extends Scene {
+  vectors: Mobject[] = [];
+
+  /** Add an arrow from origin (or `at`) to `tip`, auto-imported from
+   *  geometry/basic.ts's Vector at call time to avoid a circular import
+   *  (geometry -> core -> scene would cycle if imported statically here). */
+  addVector(tip: Vec3, opts: { color?: any; at?: Vec3 } = {}): Mobject {
+    // Lazy require pattern avoided (ESM) — caller passes a pre-built Vector
+    // mobject via `add()` normally; this convenience just registers +
+    // tracks it the way real Manim's VectorScene.add_vector does for
+    // subsequent `write_vector_coordinates` bookkeeping.
+    throw new Error(
+      'VectorScene.addVector: construct a Vector(tip, opts) from lumina and pass it to scene.add(); ' +
+      'this convenience wrapper is intentionally not implemented to avoid a core->geometry circular import. ' +
+      'Use: const vec = new Vector(tip, opts); scene.add(vec); scene.vectors.push(vec);'
+    );
+  }
+
+  getVectorLabel(vector: Mobject): Mobject | null {
+    return (vector as any).label ?? null;
+  }
 }

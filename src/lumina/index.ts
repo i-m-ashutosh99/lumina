@@ -21,10 +21,14 @@ export * from './math/rate-functions';
 export { Mobject, AnimationBuilder, buildAnimateProxy } from './core/mobject';
 export type { Updater, Snapshot } from './core/mobject';
 export { VMobject, VectorizedPoint, CurvesAsSubmobjects } from './core/vmobject';
+export { MeshMobject } from './core/mesh-mobject';
+export type { MeshStyle } from './core/mesh-mobject';
 export { Group, VGroup, VDict } from './core/group';
 export { Animation, prepareAnimation, registerTransformFactory } from './core/animation';
 export type { AnimOptions } from './core/animation';
-export { Scene, MovingCameraScene } from './core/scene';
+export {
+  Scene, MovingCameraScene, ThreeDScene, ZoomedScene, VectorScene,
+} from './core/scene';
 export type { SceneOptions, PlayOptions, ExposedTracker } from './core/scene';
 export { Clock } from './core/clock';
 export { Timeline } from './core/timeline';
@@ -34,16 +38,35 @@ export {
   ValueTracker, ComplexValueTracker, always, fAlways, alwaysRedraw,
 } from './core/updater';
 
-// ---- cameras ----
-export { Camera, MovingCamera, FrameMobject } from './cameras/camera';
+// ---- cameras (2D + 3D) ----
+export {
+  Camera, MovingCamera, FrameMobject, ZoomedCamera, ThreeDCamera, projectPoint3D,
+} from './cameras/camera';
 export type { Frame } from './cameras/camera';
 
 // ---- renderers ----
 export { Canvas2DRenderer } from './renderers/canvas2d';
 export type { RenderStats } from './renderers/canvas2d';
+export { WebGLRenderer, hasMeshMobjects } from './renderers/webgl';
+export type { WebGLRenderStats } from './renderers/webgl';
 
-// ---- geometry ----
+// ---- geometry (2D) ----
 export * from './mobjects/geometry/basic';
+
+// ---- 3D: mesh kernel + solids + lighting ----
+export {
+  sphereMesh, cubeMesh, prismMesh, cylinderMesh, coneMesh, torusMesh,
+  parametricSurfaceMesh, tetrahedronMesh, octahedronMesh, icosahedronMesh,
+  dodecahedronMesh,
+} from './math/mesh';
+export type { MeshData } from './math/mesh';
+export {
+  Sphere, Cube, Prism, Cylinder, Cone, Torus,
+  Tetrahedron, Octahedron, Icosahedron, Dodecahedron, polyhedron,
+  Dot3D, Line3D, Arrow3D, Surface, functionSurface, SurfaceMesh, TexturedSurface,
+} from './mobjects/three-d/solids';
+export { Light, defaultLight, AMBIENT_LIGHT_DEFAULT } from './mobjects/three-d/light';
+export type { LightKind, LightOptions } from './mobjects/three-d/light';
 
 // ---- graphing (partial — NumberLine/UnitInterval only; Axes/NumberPlane NOT implemented) ----
 export { NumberLine, UnitInterval } from './mobjects/graphing/number-line';
