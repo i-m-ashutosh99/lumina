@@ -52,6 +52,12 @@ export type { WebGLRenderStats } from './renderers/webgl';
 
 // ---- geometry (2D) ----
 export * from './mobjects/geometry/basic';
+export {
+  SurroundingRectangle, BackgroundRectangle, Cross, Underline, Checkmark,
+} from './mobjects/geometry/shape-matchers';
+export {
+  Brace, BraceLabel, BraceText, BraceBetweenPoints,
+} from './mobjects/geometry/brace';
 
 // ---- 3D: mesh kernel + solids + lighting ----
 export {
