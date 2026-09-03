@@ -78,9 +78,13 @@ export {
 export { Light, defaultLight, AMBIENT_LIGHT_DEFAULT } from './mobjects/three-d/light';
 export type { LightKind, LightOptions } from './mobjects/three-d/light';
 
-// ---- graphing (partial — NumberLine/UnitInterval only; Axes/NumberPlane NOT implemented) ----
+// ---- graphing ----
 export { NumberLine, UnitInterval } from './mobjects/graphing/number-line';
 export type { NumberLineOptions } from './mobjects/graphing/number-line';
+export {
+  CoordinateSystem, Axes, NumberPlane, ComplexPlane, PolarPlane,
+} from './mobjects/graphing/coordinate-system';
+export type { AxesOptions, NumberPlaneOptions, PolarPlaneOptions } from './mobjects/graphing/coordinate-system';
 
 // ---- text (real vector glyphs) ----
 export {

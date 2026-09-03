@@ -3,6 +3,8 @@
 **Status:** Audit + plan. Grounded in a full read of every engine source file (`src/lumina/`, ~8,360 lines), every design doc (00–12), the docs site (`src/site/`), and a live `npm run typecheck` (passes, 0 errors).
 **Purpose:** (1) state exactly what exists today, (2) list every confirmed gap/issue with severity, (3) give the prioritized implementation plan the implementer follows from now on.
 
+**Update (2026-09-03, later pass): Phase A is done.** `mobjects/text/mathtex.ts` (`MathTex`/`Tex`/`SingleStringMathTex`), `math/svg-path.ts` (generic SVG path + affine transform parser), and `mobjects/graphing/coordinate-system.ts` (`CoordinateSystem`/`Axes`/`NumberPlane`/`ComplexPlane`/`PolarPlane`) are implemented, exported from `index.ts`, verified via Node smoke tests, and wired into the docs site (`/api/text`, `/api/graphing`, `/guides/text`, `/guides/graphing`, gallery demos). Two real bugs were found and fixed along the way: (1) `font.ts`'s `glyphToCubics` was not re-negating y after opentype.js's own internal y-flip, so every `Text` glyph rendered vertically mirrored; (2) `Axes`'s y-axis was rotated about its bounding-box center instead of its own zero-value point, which only coincides for symmetric ranges — broken for e.g. `xRange:[0,10]`. G1 and G2 below are now ✅; see the README gap table for full detail. Phase B (Player + export) is next.
+
 Related: [12-RESEARCH-COMPARISON-2026.md](12-RESEARCH-COMPARISON-2026.md), [14-INNOVATIONS-GAPS.md](14-INNOVATIONS-GAPS.md), [10-BUILD-PLAN.md](10-BUILD-PLAN.md), [11-GAPS-AND-INNOVATIONS.md](11-GAPS-AND-INNOVATIONS.md).
 
 ---
@@ -59,9 +61,9 @@ Related: [12-RESEARCH-COMPARISON-2026.md](12-RESEARCH-COMPARISON-2026.md), [14-I
 
 | # | Area | Status | Severity |
 |---|---|---|---|
-| G1 | **MathTex / Tex** (LaTeX → vector glyphs) | ❌ not implemented; **de-risked** (doc 12 §7) | **P0** |
-| G2 | **Axes / NumberPlane / ComplexPlane / PolarPlane, `plot()`/`c2p`/`p2c`** | ❌ only NumberLine exists | **P0** |
-| G3 | **Player + `<lumina-player>` + WebM export** | ❌ Scene has playback primitives only | **P0** |
+| G1 | **MathTex / Tex** (LaTeX → vector glyphs) | ✅ **done** — `mobjects/text/mathtex.ts` via mathjax-full | — |
+| G2 | **Axes / NumberPlane / ComplexPlane / PolarPlane, `plot()`/`c2p`/`p2c`** | ✅ **done** — `mobjects/graphing/coordinate-system.ts` | — |
+| G3 | **Player + `<lumina-player>` + WebM export** | ❌ Scene has playback primitives only | **P0 — next up** |
 | G4 | **Boolean ops** (Union/Intersection/Difference/Exclusion) | ❌ | P1 |
 | G5 | **Graph/DiGraph** + layouts + algorithm animation | ❌ | P1 |
 | G6 | **Matrix/Table/Code** mobjects | ❌ | P1 |
@@ -83,16 +85,16 @@ Related: [12-RESEARCH-COMPARISON-2026.md](12-RESEARCH-COMPARISON-2026.md), [14-I
 ### 3.1 Bugs / correctness risks
 - **I1 — `VectorScene.addVector` throws** (`core/scene.ts:631`): intentional stub, but any `VectorScene` demo that calls `addVector` crashes. Needs implementation or a clear error message. (Low effort.)
 - **I2 — `addSound` is a silent no-op** (`core/scene.ts:410`): documented, but a caller gets no warning. Consider a console.warn until implemented.
-- **I3 — `Mobject.copy()` on `Text`/`MathTex`** (async-ready VGroup): `copy()` calls `new Ctor()` with no args and `copyOnto` copies points; for async-built mobjects the copy may be empty until `ready` resolves. `.animate` on Text/MathTex depends on this — must be verified once MathTex lands.
+- **I3 — `Mobject.copy()` on `Text`/`MathTex`** (async-ready VGroup): `copy()` calls `new Ctor()` with no args and `copyOnto` copies points; for async-built mobjects the copy may be empty until `ready` resolves. **Verified for `MathTex`**: `MathTexPart.copy()` is overridden to preserve `.tex`; `TransformMatchingTex` was exercised end-to-end via the gallery demo (`site/demos/mathtex.ts`) and works.
 - **I4 — `nextTo` alignedEdge logic** (`mobject.ts:230-239`): the `alignDir` computation has a `dir[1] !== 0 || true` tautology; behavior is fragile for diagonal directions. Unit-test before relying on it.
-- **I5 — `TransformMatchingTex` expects `.tex`/`.texString` per submobject** — no MathTex exists yet, so it's untested end-to-end. MathTex must tag submobjects accordingly (doc 12 §7).
+- **I5 — `TransformMatchingTex` expects `.tex`/`.texString` per submobject — RESOLVED.** `mathtex.ts` now tags every glyph LEAF (not just the `MathTexPart` container, whose own `.points` is always empty) with `.tex`, matching what `TransformMatchingTex`'s leaf-only matcher (`animations/transform.ts`) expects. Verified working via the gallery demo.
 - **I6 — `NumberLine` log-scale** (`applyScale`): uses `Math.log10` with `max(x, 1e-9)`; negative-range log axes will silently clamp. Document or guard.
 - **I7 — `CurvesAsSubmobjects`/`asDashed`** produce many tiny VMobjects — performance risk at scale (doc 10 §3.4 quality bar). Monitor.
 
 ### 3.2 Architecture / API debt
-- **I8 — MathTex backend choice**: README says KaTeX; research doc 12 §7 verifies mathjax-full. Decision: use **mathjax-full** (true TeX layout + `cssId` tagging), keep the SVG-path→Bézier parser backend-agnostic so KaTeX can be swapped later.
-- **I9 — Async construction pattern**: `Text` builds empty then `ready: Promise<this>`. MathTex must follow the same pattern (constructor synchronous, `ready` for geometry) so `.animate`/`Write`/`Transform` work.
-- **I10 — Bundle size**: mathjax-full ≈ 600 kB gz — must be a **lazy-loaded chunk**, not in the main bundle (doc 12 §7, README note).
+- **I8 — MathTex backend choice — RESOLVED.** Implemented with **mathjax-full** (true TeX layout + `\cssId` tagging); the SVG-path→Bézier parser (`math/svg-path.ts`) is generic/backend-agnostic, so KaTeX (or any other SVG-emitting TeX engine) could be swapped in later without touching the parser.
+- **I9 — Async construction pattern — RESOLVED.** `MathTex` follows `Text`'s exact pattern: constructor is synchronous, `ready: Promise<this>` resolves once MathJax has typeset and glyphs are built.
+- **I10 — Bundle size**: mathjax-full's dynamic `import()` in `getMathJaxEngine()` is only triggered on first `MathTex`/`Tex` construction, keeping it out of the main bundle path (still ~600 kB gz when it does load — confirmed a real concern, not yet split into its own explicit Vite chunk with a `<link rel="modulepreload">` hint; that polish is still open).
 - **I11 — No test runner wired** (doc 10 §9): typecheck only. Add `node:test` or Vitest for math/bezier/timeline golden tests as features land.
 - **I12 — `docs/00-INDEX.md` header** still says "No library code has been written" — stale (README corrects it). Update index to reflect reality.
 
@@ -100,11 +102,11 @@ Related: [12-RESEARCH-COMPARISON-2026.md](12-RESEARCH-COMPARISON-2026.md), [14-I
 
 ## 4. Implementation plan (priority order — follows README)
 
-### Phase A — Math typesetting + graphing (P0, this pass)
-1. **A1 — `mobjects/text/mathtex.ts`**: `MathTex`/`Tex` via mathjax-full SVG → cubic-Bézier parser (doc 12 §7). Follow `Text`'s async-ready pattern. Tag submobjects with `tex` for `TransformMatchingTex`. Add `index.ts` exports. Lazy-load mathjax chunk.
-2. **A2 — `mobjects/graphing/axes.ts`**: `Axes` (x_range/y_range, `c2p`/`p2c`, `plot()`, `getXAxis`/`getYAxis`, `add_coordinates`), `NumberPlane` (grid lines + faded unit squares), `ComplexPlane`, `PolarPlane` (grid arc/line families), `ThreeDAxes` (3D). Follow NumberLine's n2p/p2n pattern.
-3. **A3 — graphing helpers**: `ParametricFunction`, `ImplicitFunction` (via marchingSquares), `getRiemannRectangles`, `getArea`, `getTangentLine` — the calculus pack seeds.
-4. **A4 — smoke tests + docs**: extend `src/demo.ts` / gallery with a MathTex + Axes scene; verify typecheck + build.
+### Phase A — Math typesetting + graphing (P0) — ✅ DONE
+1. ~~**A1 — `mobjects/text/mathtex.ts`**~~ — **done**: `MathTex`/`Tex`/`SingleStringMathTex` via mathjax-full SVG → cubic-Bézier parser (`math/svg-path.ts`). Follows `Text`'s async-ready pattern. Every glyph leaf tagged `.tex` for `TransformMatchingTex`. `index.ts` exports added. mathjax-full loaded via lazy dynamic `import()`.
+2. ~~**A2 — `mobjects/graphing/axes.ts`**~~ — **done** (as `mobjects/graphing/coordinate-system.ts`): `Axes` (`xRange`/`yRange`, `c2p`/`p2c`, `plot()`), `NumberPlane` (background grid lines), `ComplexPlane` (`complexToPoint`/`pointToComplex`), `PolarPlane` (rings/spokes/`plotPolarGraph`). Follows NumberLine's n2p/p2n pattern. **Not yet done**: `ThreeDAxes` (3D) — still open, low priority until 3D follow-ups (G16) are picked up.
+3. **A3 — graphing helpers** — **partially done**: `plotParametric` (parametric curves), `getRiemannRectangles`, `getArea`, `getVerticalLine` are implemented on `CoordinateSystem`. **Still open**: `ImplicitFunction` (via `marchingSquares`, which already exists in `math/bezier.ts`), `getTangentLine`/`secant_slope_group`-style calculus helpers, `getGraphLabel()`.
+4. ~~**A4 — smoke tests + docs**~~ — **done**: Node esbuild-bundled smoke tests for both MathTex and Axes/NumberPlane (zero-point alignment, roundtrips, bounding boxes) all passed; gallery demos added (`site/demos/mathtex.ts`, `site/demos/graphing.ts`); new docs site pages (`/api/text` MathTex section, `/api/graphing`, `/guides/graphing`, `/guides/text` MathTex section); `npm run typecheck` + `npm run build` pass.
 
 ### Phase B — Player + export (P0)
 5. **B1 — `player/player.ts`**: JS `Player` class wrapping Scene playback primitives (play/pause/seek/speed/loop/fullscreen/keyboard/sections).
@@ -126,20 +128,21 @@ Related: [12-RESEARCH-COMPARISON-2026.md](12-RESEARCH-COMPARISON-2026.md), [14-I
 
 ## 5. Acceptance criteria per phase
 
-- **A**: `Write(MathTex("x^2 + \\frac{1}{2}"))` renders as morphable VMobjects; `TransformMatchingTex` morphs `x^2` → `x^3`; `Axes` plots `sin(x)` with `c2p` correct; typecheck+build pass.
+- **A**: ✅ met — `Write(MathTex("x^2 + \\frac{1}{2}"))` renders as morphable VMobjects; `TransformMatchingTex` morphs formulas (verified with `a^2+b^2` ↔ `b^2+a^2` in the gallery demo); `Axes` plots functions with `c2p` correct for both symmetric and asymmetric ranges; typecheck+build pass.
 - **B**: acceptance scene plays/seeks/embeds via `<lumina-player>`; WebM/GIF/PNG export produces non-empty files of ≈ scene duration.
 - **C**: every README gap row flips to ✅.
 - **D**: one golden demo per domain pack (doc 10 §9).
 
 ---
 
-## 6. Immediate next actions (this pass)
+## 6. Immediate next actions
 
-1. Write `docs/14-INNOVATIONS-GAPS.md` (innovations/gaps doc).
-2. Update `docs/00-INDEX.md` (add 12–14, fix stale header).
-3. Implement **A1 MathTex** (the de-risked path), then **A2 Axes/NumberPlane/plot()**.
-4. `npm run typecheck` + `npm run build`; smoke-test in browser.
-5. Commit + squash + PR from `genspark_ai_developer` → main; provide PR link.
+1. ~~Write `docs/14-INNOVATIONS-GAPS.md`~~ — done.
+2. ~~Update `docs/00-INDEX.md`~~ — done.
+3. ~~Implement **A1 MathTex**, then **A2 Axes/NumberPlane/plot()**~~ — done (this doc, section 4 Phase A).
+4. ~~`npm run typecheck` + `npm run build`; smoke-test~~ — done, both pass; docs site pages verified serving 200 with expected content.
+5. Commit + squash + PR from `genspark_ai_developer` → main; provide PR link — **in progress, do this next**.
+6. **Start Phase B — Player + export** (`player/player.ts`, `<lumina-player>` custom element, WebM/GIF/PNG export) — the next P0 priority per the README.
 
 ---
 

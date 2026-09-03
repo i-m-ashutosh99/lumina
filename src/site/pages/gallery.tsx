@@ -22,6 +22,16 @@ export const GalleryPage: FC = () => (
     <div class="demo-frame" id="demo-text"></div>
     <p class="demo-source"><a href="https://github.com/i-m-ashutosh99/lumina/blob/main/src/site/demos/text.ts" target="_blank" rel="noreferrer">View source: demos/text.ts</a></p>
 
+    <h2>MathTex: LaTeX + TransformMatchingTex formula morph</h2>
+    <p>Real LaTeX typeset via <code>mathjax-full</code>, colored by subexpression, morphed into a new arrangement with <code>TransformMatchingTex</code>, then faded into <code>E = mc^2</code>.</p>
+    <div class="demo-frame" id="demo-mathtex"></div>
+    <p class="demo-source"><a href="https://github.com/i-m-ashutosh99/lumina/blob/main/src/site/demos/mathtex.ts" target="_blank" rel="noreferrer">View source: demos/mathtex.ts</a></p>
+
+    <h2>Graphing: Axes, plot(), Riemann rectangles</h2>
+    <p>An <code>Axes</code> coordinate system with a plotted curve and Riemann-sum rectangles approximating the area under it.</p>
+    <div class="demo-frame" id="demo-graphing"></div>
+    <p class="demo-source"><a href="https://github.com/i-m-ashutosh99/lumina/blob/main/src/site/demos/graphing.ts" target="_blank" rel="noreferrer">View source: demos/graphing.ts</a></p>
+
     <h2>3D: solid + lighting + camera</h2>
     <p>A lit <code>Dodecahedron</code> rendered by the owned WebGL2 renderer inside a <code>ThreeDScene</code>, scaled and rotated.</p>
     <div class="demo-frame" id="demo-3d"></div>
@@ -30,9 +40,13 @@ export const GalleryPage: FC = () => (
     <script type="module" dangerouslySetInnerHTML={{ __html: `
       import { runShapesDemo } from '/src/site/demos/shapes.ts';
       import { runTextDemo } from '/src/site/demos/text.ts';
+      import { runMathTexDemo } from '/src/site/demos/mathtex.ts';
+      import { runGraphingDemo } from '/src/site/demos/graphing.ts';
       import { runThreeDDemo } from '/src/site/demos/three-d.ts';
       runShapesDemo('demo-shapes').catch(e => console.error('shapes demo', e));
       runTextDemo('demo-text').catch(e => console.error('text demo', e));
+      runMathTexDemo('demo-mathtex').catch(e => console.error('mathtex demo', e));
+      runGraphingDemo('demo-graphing').catch(e => console.error('graphing demo', e));
       runThreeDDemo('demo-3d').catch(e => console.error('3d demo', e));
     ` }}></script>
   </>

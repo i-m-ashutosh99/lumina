@@ -4,6 +4,8 @@
 
 Related: [11-GAPS-AND-INNOVATIONS.md](11-GAPS-AND-INNOVATIONS.md), [12-RESEARCH-COMPARISON-2026.md](12-RESEARCH-COMPARISON-2026.md), [13-AUDIT-PLAN-ISSUES.md](13-AUDIT-PLAN-ISSUES.md).
 
+**Update (2026-09-03, later pass):** §1's MathTex and Axes/NumberPlane/plot()/c2p/p2c rows (marked "A1 — this pass" / "A2 — this pass") are now **done**. The backend-agnostic SVG-path→Bézier parser mentioned in §4 was built as `math/svg-path.ts` and is already reused as-is by `MathTex` (§4's stated design intent — one parser for MathJax now, KaTeX/SVGMobject later — held up in practice). **FormulaToGraph** (§3) is now unblocked (both of its prerequisites, A1 and A2, are done) but not yet built itself.
+
 ---
 
 ## 1. Gaps newly confirmed by the 2026 research (vs manim-web etc.)

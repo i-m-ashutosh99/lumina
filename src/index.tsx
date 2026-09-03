@@ -8,6 +8,7 @@ import { CoreConceptsPage } from './site/pages/guides/core-concepts'
 import { AnimationsPage } from './site/pages/guides/animations'
 import { TimelineSeekPage } from './site/pages/guides/timeline-seek'
 import { TextPage } from './site/pages/guides/text'
+import { GraphingPage } from './site/pages/guides/graphing'
 import { Camera3DPage } from './site/pages/guides/camera-3d'
 import { UpdatersPage } from './site/pages/guides/updaters'
 import { ApiCorePage } from './site/pages/api/core'
@@ -15,6 +16,7 @@ import { ApiGeometryPage } from './site/pages/api/geometry'
 import { ApiThreeDPage } from './site/pages/api/three-d'
 import { ApiAnimationsPage } from './site/pages/api/animations'
 import { ApiTextPage } from './site/pages/api/text'
+import { ApiGraphingPage } from './site/pages/api/graphing'
 import { ApiCamerasRenderersPage } from './site/pages/api/cameras-renderers'
 import { GalleryPage } from './site/pages/gallery'
 import { DeployNpmPage } from './site/pages/deployment/npm'
@@ -36,6 +38,7 @@ docsPage('/guides/core-concepts', 'Core Concepts', CoreConceptsPage)
 docsPage('/guides/animations', 'Animation Catalogue', AnimationsPage)
 docsPage('/guides/timeline-seek', 'Timeline, Seeking & Playback', TimelineSeekPage)
 docsPage('/guides/text', 'Text & Typography', TextPage)
+docsPage('/guides/graphing', 'Graphing & Coordinate Systems', GraphingPage)
 docsPage('/guides/camera-3d', '3D, Camera & Lighting', Camera3DPage)
 docsPage('/guides/updaters', 'Updaters & ValueTrackers', UpdatersPage)
 docsPage('/api/core', 'API: Core', ApiCorePage)
@@ -43,6 +46,7 @@ docsPage('/api/geometry', 'API: Geometry', ApiGeometryPage)
 docsPage('/api/three-d', 'API: 3D', ApiThreeDPage)
 docsPage('/api/animations', 'API: Animations', ApiAnimationsPage)
 docsPage('/api/text', 'API: Text', ApiTextPage)
+docsPage('/api/graphing', 'API: Graphing', ApiGraphingPage)
 docsPage('/api/cameras-renderers', 'API: Cameras & Renderers', ApiCamerasRenderersPage)
 docsPage('/gallery', 'Demo Gallery', GalleryPage)
 docsPage('/deployment/npm', 'Publishing to npm', DeployNpmPage)

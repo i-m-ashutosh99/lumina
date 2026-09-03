@@ -1,6 +1,6 @@
 # Lumina — Research, Planning, and Design Documentation
 
-**Status:** Design source of truth. **Library code IS written** — a real, compiling TypeScript engine lives under `src/lumina/` (~8,360 lines) and the docs site under `src/site/`. See [../README.md](../README.md) for live implementation status and the authoritative gap table. Docs 12–14 are the 2026 audit/research/plan additions.
+**Status:** Design source of truth. **Library code IS written** — a real, compiling TypeScript engine lives under `src/lumina/` (~9,000+ lines) and the docs site under `src/site/`. See [../README.md](../README.md) for live implementation status and the authoritative gap table. Docs 12–14 are the 2026 audit/research/plan additions. **Latest update (2026-09-03):** Phase A of [13-AUDIT-PLAN-ISSUES.md](13-AUDIT-PLAN-ISSUES.md) is done — `MathTex`/`Tex` (via `mathjax-full`) and `Axes`/`NumberPlane`/`ComplexPlane`/`PolarPlane` are now implemented, documented on the docs site (`/api/text`, `/api/graphing`, `/guides/graphing`), and demoed in the gallery. Phase B (Player + WebM/GIF/PNG export) is next.
 
 **Working library name:** **Lumina** (locked — see `package.json` `"name": "lumina"`, MIT license).
 

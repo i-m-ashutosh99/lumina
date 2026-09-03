@@ -5,6 +5,8 @@
 
 Related: [01-RESEARCH-LANDSCAPE.md](01-RESEARCH-LANDSCAPE.md), [05-FEATURE-MATRIX.md](05-FEATURE-MATRIX.md), [11-GAPS-AND-INNOVATIONS.md](11-GAPS-AND-INNOVATIONS.md), [13-AUDIT-PLAN-ISSUES.md](13-AUDIT-PLAN-ISSUES.md), [14-INNOVATIONS-GAPS.md](14-INNOVATIONS-GAPS.md).
 
+**Update (2026-09-03, later pass):** the MathTex de-risking analysis below (§7) and the MathTex/Axes "planned (this pass)" row (§8) are now **implemented** — `mobjects/text/mathtex.ts` and `mobjects/graphing/coordinate-system.ts`. The backend choice actually used matches §7's conclusion exactly: **mathjax-full**, not KaTeX. See [13-AUDIT-PLAN-ISSUES.md](13-AUDIT-PLAN-ISSUES.md) §4 Phase A for the completed implementation writeup, including two real bugs found and fixed (`Text` glyph y-flip in `font.ts`, `Axes` zero-point alignment for asymmetric ranges).
+
 ---
 
 ## 1. Method

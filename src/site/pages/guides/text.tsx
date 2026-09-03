@@ -60,21 +60,49 @@ await scene.play(new Write(title));`}</pre>
     </p>
     <pre>{`await scene.play(new Indicate(title.children[0]));  // highlight just the first glyph`}</pre>
 
-    <h2>MathTex / Tex — not yet implemented</h2>
-    <div class="callout warn">
-      LaTeX-style math typesetting (<code>MathTex</code>, <code>Tex</code>) is
-      <strong>researched and de-risked but not yet coded</strong>. The plan (documented in
-      the engine's internal design docs) is to render via <code>mathjax-full</code>'s SVG
-      output jax, parse the resulting <code>&lt;path d="..."&gt;</code> data into cubic
-      VMobjects, and use MathJax's <code>\cssId</code> mechanism to tag per-subexpression
-      submobjects for <code>TransformMatchingTex</code> formula morphs — the same approach
-      real Manim uses with dvisvgm, just with a browser-native TeX engine. Until this ships,
-      use <code>Text</code> for any math you can express without true TeX layout (fractions,
-      matrices, etc. need real box layout).
+    <h2>MathTex / Tex — real LaTeX typesetting</h2>
+    <p>
+      For actual TeX layout — fractions, matrices, radicals, sub/superscripts positioned correctly — use
+      <code>MathTex</code> instead of <code>Text</code>. It renders via <code>mathjax-full</code>'s TeX-input →
+      SVG-output pipeline (the same box-layout math real Manim's LaTeX+dvisvgm pipeline does, just with a
+      browser-native TeX engine instead of shelling out to a LaTeX binary) and converts the resulting
+      <code>&lt;path&gt;</code>/<code>&lt;rect&gt;</code> tree into cubic-Bézier <code>VMobject</code> glyphs —
+      so, exactly like glyph-outline <code>Text</code> above, a <code>MathTex</code> formula is a real vector
+      shape you can <code>Transform</code>, <code>Write</code>, or morph with <code>TransformMatchingTex</code>.
+    </p>
+    <pre>{`import { MathTex, Write } from 'lumina';
+
+const eq = new MathTex('E = mc^2');
+await eq.ready;                     // MathJax typesetting is async, same pattern as Text.ready
+await scene.play(new Write(eq));`}</pre>
+
+    <h3>Isolating subexpressions for formula morphs</h3>
+    <p>
+      Pass multiple strings (or the <code>isolate</code> option) to tag individual subexpressions as their own
+      matchable parts — <code>TransformMatchingTex</code> then pairs up parts that share the same source text
+      across two formulas, gliding matching pieces into their new positions instead of cross-fading the whole
+      expression:
+    </p>
+    <pre>{`import { MathTex, TransformMatchingTex } from 'lumina';
+
+const eq1 = new MathTex('a^2', '+', 'b^2', { isolate: ['a^2', 'b^2'] });
+const eq2 = new MathTex('b^2', '+', 'a^2', { isolate: ['a^2', 'b^2'] });
+await Promise.all([eq1.ready, eq2.ready]);
+await scene.play(new TransformMatchingTex(eq1, eq2));`}</pre>
+
+    <h3>Coloring subexpressions</h3>
+    <pre>{`const eq = new MathTex('\\\\frac{d}{dx} x^n = n x^{n-1}', {
+  texToColorMap: { 'x^n': BLUE, 'n x^{n-1}': YELLOW },
+});`}</pre>
+
+    <div class="callout">
+      Full API (options, <code>Tex</code>, <code>getPartByTex</code>, the MathJax→VMobject pipeline in detail):
+      see <a href="/api/text">API: Text</a>.
     </div>
 
     <div class="callout">
-      Next: <a href="/guides/camera-3d">3D, Camera &amp; Lighting</a>.
+      Next: <a href="/guides/graphing">Graphing &amp; Coordinate Systems</a> (plot <code>MathTex</code> labels
+      on an <code>Axes</code>), or <a href="/guides/camera-3d">3D, Camera &amp; Lighting</a>.
     </div>
   </>
 );
