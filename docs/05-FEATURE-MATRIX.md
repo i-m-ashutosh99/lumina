@@ -7,6 +7,8 @@ Legend: **Y** = first-class, **P** = partial / DIY, **N** = no, **—** = not ap
 
 Columns: **CE** Manim Community, **GL** ManimGL, **M.js** Manim.js, **MW** manim-web, **T3** Three.js, **MC** Motion Canvas, **L** Lumina target.
 
+**Note:** this is the original *design-target* checklist (every "Lumina" column entry is a goal, not a claim of what's built). For the actual, currently-implemented status, see the README's "Implementation status" gap table and [13-AUDIT-PLAN-ISSUES.md](13-AUDIT-PLAN-ISSUES.md) §2 (gaps G1–G16). As of this pass: **MathTex/Tex** and **Axes/NumberPlane/ComplexPlane/PolarPlane** (rows in §5 and §1 below) are now ✅ implemented — see §5's note on the MathTex backend choice.
+
 ---
 
 ## 1. Core engine
@@ -40,7 +42,7 @@ Columns: **CE** Manim Community, **GL** ManimGL, **M.js** Manim.js, **MW** manim
 | 1D morph (interval, number, tracker) | Y | Y | N | P | N | P | **Y** |
 | Full 2D geometry (arc/line/polygram) | Y | Y | P | P | P | P | **Y** |
 | Boolean 2D (union/intersect/diff/xor) | Y | P | N | N | N | N | **Y** |
-| Coordinate systems (Axes, Plane, Polar, Complex) | Y | Y | N | P | N | N | **Y** |
+| Coordinate systems (Axes, Plane, Polar, Complex) | Y | Y | N | P | N | N | **Y** — ✅ implemented (`mobjects/graphing/coordinate-system.ts`) |
 | Function / parametric / implicit plots | Y | Y | N | P | P | N | **Y** |
 | Vector fields + streamlines | Y | Y | N | P | P | N | **Y** |
 | 3D surfaces parametric | Y | Y | N | P | Y | N | **Y** |
@@ -93,16 +95,24 @@ Columns: **CE** Manim Community, **GL** ManimGL, **M.js** Manim.js, **MW** manim
 
 | Feature | CE | GL | MW | Lumina |
 |---|---|---|---|---|
-| Text (system fonts) | Pango | Pango | KaTeX/canvas | **Canvas + OpenType outlines** |
-| MathTex / Tex | local LaTeX | local LaTeX | KaTeX | **KaTeX** |
-| Substring isolate / color map | Y | Y | P | **Y** |
-| TransformMatchingTex | Y | Y | N | **Y** |
+| Text (system fonts) | Pango | Pango | KaTeX/canvas | **Canvas + OpenType outlines — ✅ implemented** |
+| MathTex / Tex | local LaTeX | local LaTeX | KaTeX | **mathjax-full (browser TeX engine) — ✅ implemented**, not KaTeX (see decision note below) |
+| Substring isolate / color map | Y | Y | P | **Y — ✅ implemented** (`isolate`/`texToColorMap` options) |
+| TransformMatchingTex | Y | Y | N | **Y — ✅ implemented**, verified via gallery demo |
 | DecimalNumber / Integer / Variable | Y | Y | N | **Y** |
 | Code (syntax highlight) | Pygments | P | N | **highlight.js tokens → VMobjects** |
 | Brace / BraceLabel | Y | Y | P | **Y** |
 | Title, BulletedList, Paragraph | Y | Y | P | **Y** |
 | SVG import | Y | Y | P | **Y** |
 | Typst | Y | N | N | later optional |
+
+**Decision note (MathTex backend):** this doc originally targeted KaTeX, but the actual implementation uses
+**`mathjax-full`** instead — confirmed via research (doc 12 §7) that `mathjax-full`'s `liteAdaptor` + `SVG`
+output jax produces path-only SVG (no DOM needed, `M/L/Q/C/Z/H/V/T` commands only with `fontCache:'none'`) with
+`\cssId` tagging surviving into the output, which was the missing piece for per-subexpression
+`TransformMatchingTex` matching. `katex` remains an installed dependency but is currently unused; the
+SVG-path→Bézier parser (`math/svg-path.ts`) is generic enough that KaTeX's SVG output (if ever preferred for
+bundle-size reasons) could be routed through the same pipeline later.
 
 ---
 
@@ -228,8 +238,8 @@ Not in scope: training real models in the browser as a core feature. Optional la
 | Phase | Must reach “Y” on |
 |---|---|
 | **0** (this docs set) | Research complete. No code. |
-| **1** | Core engine 2D + creation/fade/grow/transform(basic) + Axes/NumberPlane + Text/MathTex(KaTeX) + Player + embed |
-| **2** | Full animation catalogue, TransformMatching*, ComplexPlane, LinearTransformationScene, MovingCamera, Zoomed, boolean ops, graphs, 3D solids/surfaces/camera |
+| **1** | Core engine 2D + creation/fade/grow/transform(basic) + Axes/NumberPlane + Text/MathTex(KaTeX) + Player + embed — **mostly done**: core engine 2D, animations, Text, MathTex (mathjax-full, not KaTeX), Axes/NumberPlane are all ✅ implemented; Player + embed are the remaining item. |
+| **2** | Full animation catalogue, TransformMatching*, ComplexPlane, LinearTransformationScene, MovingCamera, Zoomed, boolean ops, graphs, 3D solids/surfaces/camera — **mostly done**: animation catalogue, `TransformMatchingShapes`/`TransformMatchingTex`, ComplexPlane, MovingCamera/Zoomed, 3D solids/surfaces/camera are ✅ implemented; boolean ops and Graph/DiGraph remain open. `LinearTransformationScene` equivalent not yet built. |
 | **3** | Domain packs, formula↔graph, step UI, export GIF/PNG, React wrapper, JSON serialization |
 | **4** | Physics/ML polish, WebGPU research, audio, py-to-js mapping tool |
 

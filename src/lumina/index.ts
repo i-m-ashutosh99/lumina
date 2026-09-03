@@ -16,6 +16,10 @@ export * from './math/bezier';
 export * from './math/rng';
 export * from './math/constants';
 export * from './math/rate-functions';
+export {
+  parseSvgPathToCubics, parseTransformAttr, composeAffine, applyAffine, transformCubics, AFFINE_IDENTITY,
+} from './math/svg-path';
+export type { Affine2D } from './math/svg-path';
 
 // ---- core ----
 export { Mobject, AnimationBuilder, buildAnimateProxy } from './core/mobject';
@@ -74,16 +78,24 @@ export {
 export { Light, defaultLight, AMBIENT_LIGHT_DEFAULT } from './mobjects/three-d/light';
 export type { LightKind, LightOptions } from './mobjects/three-d/light';
 
-// ---- graphing (partial — NumberLine/UnitInterval only; Axes/NumberPlane NOT implemented) ----
+// ---- graphing ----
 export { NumberLine, UnitInterval } from './mobjects/graphing/number-line';
 export type { NumberLineOptions } from './mobjects/graphing/number-line';
+export {
+  CoordinateSystem, Axes, NumberPlane, ComplexPlane, PolarPlane,
+} from './mobjects/graphing/coordinate-system';
+export type { AxesOptions, NumberPlaneOptions, PolarPlaneOptions } from './mobjects/graphing/coordinate-system';
 
-// ---- text (real vector glyphs; MathTex/KaTeX NOT implemented) ----
+// ---- text (real vector glyphs) ----
 export {
   Text, Paragraph, Title, BulletedList, DecimalNumber, Integer, Variable, Glyph,
 } from './mobjects/text/text';
 export type { TextOptions } from './mobjects/text/text';
 export { loadFont, glyphToCubics, preloadDefaultFonts } from './mobjects/text/font';
+
+// ---- MathTex / Tex (LaTeX -> vector glyphs via mathjax-full SVG output) ----
+export { MathTex, Tex, SingleStringMathTex, MathTexPart, preloadMathJax } from './mobjects/text/mathtex';
+export type { MathTexOptions } from './mobjects/text/mathtex';
 
 // ---- animations ----
 export * from './animations/creation';

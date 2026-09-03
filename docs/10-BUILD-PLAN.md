@@ -73,8 +73,8 @@ Implement in this order. Each package has a demo that must run before the next s
 | 1.9 | **Timeline record + seek** | dry-run snapshots, `render(t)`, rebuild-from-0 fallback | scrub a completed scene |
 | 1.10 | **Geometry set (v1)** | Square, Circle, Rectangle, Line, Arrow, Dot, Polygon, RegularPolygon, Triangle, Star, Arc, Ellipse, VGroup | gallery page |
 | 1.11 | **Text** | Canvas Text + opentype outlines (morphable) | Write(Text) |
-| 1.12 | **MathTex** | KaTeX → SVG paths → VMobject tree | Write(MathTex) |
-| 1.13 | **Graphing v1** | NumberLine, Axes, NumberPlane, `plot`, `c2p/p2c` | sine on Axes |
+| 1.12 | **MathTex** — ✅ **done** (built with mathjax-full, not KaTeX — see doc 13 §3.2 I8) | mathjax-full → SVG paths → VMobject tree | Write(MathTex) |
+| 1.13 | **Graphing v1** — ✅ **done** | NumberLine, Axes, NumberPlane, `plot`, `c2p/p2c` | sine on Axes |
 | 1.14 | **ValueTracker + updaters** | `addUpdater`, `alwaysRedraw`, `always` / `fAlways` aliases | tracker moves a Dot |
 | 1.15 | **Player** | play/pause/seek/speed/loop/fullscreen, keyboard, sections list | chrome around acceptance scene |
 | 1.16 | **Web component + embed** | `<lumina-player src>` , script-tag IIFE | iframe-able lesson snippet |
