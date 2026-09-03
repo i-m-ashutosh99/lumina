@@ -1,11 +1,42 @@
 import { Hono } from 'hono'
 import { renderer } from './renderer'
+import { Layout } from './site/layout'
+import { HomePage } from './site/pages/home'
+import { QuickstartPage } from './site/pages/quickstart'
+import { InstallationPage } from './site/pages/guides/installation'
+import { CoreConceptsPage } from './site/pages/guides/core-concepts'
+import { AnimationsPage } from './site/pages/guides/animations'
+import { TimelineSeekPage } from './site/pages/guides/timeline-seek'
+import { TextPage } from './site/pages/guides/text'
+import { Camera3DPage } from './site/pages/guides/camera-3d'
+import { UpdatersPage } from './site/pages/guides/updaters'
+import { ApiCorePage } from './site/pages/api/core'
 
 const app = new Hono()
 
-app.use(renderer)
+// Docs site routes — self-contained <html> shell via Layout, rendered
+// directly (not through the `renderer` jsxRenderer middleware, which wraps
+// its own <html>/<head> for the engine dev-preview page below).
+const docsPage = (path: string, title: string, Page: any) => {
+  app.get(path, (c) => c.html(<Layout title={title} active={path}><Page /></Layout>))
+}
 
-app.get('/', (c) => {
+docsPage('/', 'Overview', HomePage)
+docsPage('/quickstart', 'Quickstart', QuickstartPage)
+docsPage('/guides/installation', 'Installation & Setup', InstallationPage)
+docsPage('/guides/core-concepts', 'Core Concepts', CoreConceptsPage)
+docsPage('/guides/animations', 'Animation Catalogue', AnimationsPage)
+docsPage('/guides/timeline-seek', 'Timeline, Seeking & Playback', TimelineSeekPage)
+docsPage('/guides/text', 'Text & Typography', TextPage)
+docsPage('/guides/camera-3d', '3D, Camera & Lighting', Camera3DPage)
+docsPage('/guides/updaters', 'Updaters & ValueTrackers', UpdatersPage)
+docsPage('/api/core', 'API: Core', ApiCorePage)
+
+// Engine dev-preview smoke test (Canvas2D), kept at a separate path so it
+// doesn't collide with the docs home page above. Uses its own minimal
+// jsxRenderer middleware (style.css), scoped to just this route.
+app.use('/dev-preview', renderer)
+app.get('/dev-preview', (c) => {
   return c.render(
     <div class="wrap">
       <h1>Lumina — engine dev preview</h1>
