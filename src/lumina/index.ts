@@ -127,3 +127,14 @@ export { Graph, DiGraph, registerGraphTextCtor } from './mobjects/graph/graph';
 export type {
   VertexId, EdgeKey, LayoutName, GraphOptions, AlgoAnimOptions,
 } from './mobjects/graph/graph';
+
+// ---- matrix / table (doc 09 §3.1, §10.1, §11 — data-structure mobjects) ----
+export {
+  Matrix, IntegerMatrix, DecimalMatrix, MobjectMatrix,
+  Table, IntegerTable, DecimalTable, MobjectTable,
+} from './mobjects/data/matrix';
+export type { MatrixBracket, MatrixEntry, MatrixOptions, TableOptions } from './mobjects/data/matrix';
+
+// ---- code highlighting (doc 09 §10.4 — highlight.js token-only) ----
+export { Code, CodeBlock, DEFAULT_CODE_THEME } from './mobjects/data/code';
+export type { CodeOptions } from './mobjects/data/code';
