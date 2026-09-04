@@ -211,8 +211,70 @@ export class SurfaceMesh extends Surface {
   }
 }
 
-/** TexturedSurface — a Surface with a checker/UV pattern baked in as
- *  vertex colors is out of v1 scope (no image textures yet); expose the
- *  class now so the API name exists and future texture support is
- *  additive, not a breaking rename. */
-export class TexturedSurface extends Surface {}
+/**
+ * TexturedSurface — a `Surface` sampling an image texture instead of a flat
+ * `meshStyle.color` (doc 07 §9 `new TexturedSurface(surface, dayUrl,
+ * nightUrl?)`, doc 13 audit gap G16 "3D follow-ups: textures").
+ *
+ * Real ManimCE's `TexturedSurface` blends a "day" and "night" image by how
+ * directly each fragment's normal faces the light (so e.g. a textured globe
+ * shows its lit hemisphere with the day map and its dark hemisphere with
+ * the night map) — `renderers/webgl.ts`'s texture-variant fragment shader
+ * reproduces that exact blend. If only `dayUrl` is given, the whole surface
+ * just samples that one texture (no blend).
+ *
+ * Construction is synchronous (mirrors `Surface`'s geometry immediately, so
+ * placement/bounding-box calls work right away); the image itself loads
+ * asynchronously — `await surf.ready` before the first render if the image
+ * must be guaranteed decoded (matches `Text`/`MathTex`/`Code`'s existing
+ * async-ready pattern used throughout this codebase). Uses the browser's
+ * `Image()` constructor directly (no bundler asset pipeline dependency,
+ * works with any same-origin or CORS-enabled URL) and is a safe no-op
+ * outside a DOM environment (SSR/build).
+ *
+ * ```js
+ * const globe = new TexturedSurface(
+ *   (u, v) => sphereParamPoint(u, v, 2),
+ *   '/textures/earth-day.jpg', '/textures/earth-night.jpg',
+ *   { resolution: [64, 32] }
+ * );
+ * await globe.ready;
+ * scene.add(globe);
+ * ```
+ */
+export class TexturedSurface extends Surface {
+  dayUrl: string;
+  nightUrl: string | null;
+  ready: Promise<this>;
+
+  constructor(
+    fn: (u: number, v: number) => Vec3,
+    dayUrl: string,
+    nightUrl?: string | null,
+    opts: { uRange?: [number, number]; vRange?: [number, number]; resolution?: [number, number]; color?: any } = {}
+  ) {
+    super(fn, opts);
+    this.dayUrl = dayUrl;
+    this.nightUrl = nightUrl ?? null;
+    this.texture = { dayImage: null, nightImage: null };
+    this.ready = this.loadImages();
+  }
+
+  private async loadImages(): Promise<this> {
+    if (typeof Image === 'undefined') return this; // SSR/build: no-op, geometry still valid
+    const load = (url: string): Promise<HTMLImageElement> =>
+      new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error(`TexturedSurface: failed to load "${url}"`));
+        img.src = url;
+      });
+    const [day, night] = await Promise.all([
+      load(this.dayUrl),
+      this.nightUrl ? load(this.nightUrl) : Promise.resolve(null),
+    ]);
+    this.texture = { dayImage: day, nightImage: night };
+    return this;
+  }
+}
